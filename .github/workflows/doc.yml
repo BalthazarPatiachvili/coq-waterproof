@@ -1,0 +1,60 @@
+name: Documentation
+
+on:
+
+  push:
+    branch: [ "main" ]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up git repository
+        uses: actions/checkout@v2
+      
+      - name: Build plugin
+        uses: coq-community/docker-coq-action@v1
+        with:
+          custom_image: 'coqorg/coq:dev'
+
+      - name: Build doc
+        run: dune build @doc
+      
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact
+        with:
+          path: "_build/default/_doc/"
+
+  deploy:
+    name: deploy
+    needs: build
+
+    permission:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.output.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy documentation to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+        with:
+          token: ${{ github.token }}

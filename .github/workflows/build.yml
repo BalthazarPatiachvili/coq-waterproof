@@ -1,0 +1,23 @@
+name: Build
+
+on:
+  
+  push:
+    branches: [ "*" ]
+  
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up git repository
+        uses: actions/checkout@v2
+      
+      - name: Build plugin
+        uses: coq-community/docker-coq-action@v1
+        with:
+          custom_image: 'coqorg/coq:dev'

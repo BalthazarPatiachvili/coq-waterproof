@@ -3,7 +3,7 @@ name: Documentation
 on:
 
   push:
-    branch: [ "main" ]
+    branches: [ "main" ]
 
   workflow_dispatch:
 

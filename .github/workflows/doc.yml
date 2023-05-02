@@ -33,6 +33,7 @@ jobs:
           custom_image: 'coqorg/coq:dev-ocaml-4.14-flambda'
           script: |
             startGroup "Building documentation"
+              sudo chmod 777 -R .
               opam install -y -v odoc
               opam exec -- dune build @doc
             endGroup

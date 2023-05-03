@@ -72,7 +72,7 @@ let exists_evaluable_reference (env: Environ.env) (evaluable_ref: Tacred.evaluab
 let incr_trace_depth (trace: trace): trace = {log_level = trace.log_level; current_depth = trace.current_depth + 1; trace = trace.trace}
 
 (**
-  Updates the given debug and print informations according to the field [Hints.debug]
+  Updates the given trace and prints informations according to the field [Hints.debug]
 *)
 let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Proofview.tactic): 'a Proofview.tactic =
   let s = String.make (trace.current_depth + 1) '*' in

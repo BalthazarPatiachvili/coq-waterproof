@@ -51,7 +51,7 @@ let exact h =
     if occur_existential sigma t || occur_existential sigma concl then
       let sigma = Evd.clear_metas sigma in
       try
-        let sigma = Unification.w_unify env sigma Reduction.CONV ~flags:auto_unif_flags concl t in
+        let sigma = Unification.w_unify env sigma CONV ~flags:auto_unif_flags concl t in
         Proofview.Unsafe.tclEVARSADVANCE sigma <*>
         exact_no_check c
       with e when CErrors.noncritical e -> Proofview.tclZERO e
@@ -127,23 +127,23 @@ let tclLOG (dbg: debug) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Proo
 (**
   Cleans up the trace with a higher depth than the given [depth]
 *)
-let rec cleanup_info_trace (depth: int) (acc: trace_atom list) (trace: trace_atom list): trace_atom list =
+let rec cleanup_info_trace (acc: trace_atom list) (trace: trace_atom list): trace_atom list =
   match trace with
     | [] -> acc
-    | (is_success, d, hint, src) :: l -> cleanup_info_trace d ((is_success, d, hint, src)::acc) l
+    | (is_success, d, hint, src) :: l -> cleanup_info_trace ((is_success, d, hint, src)::acc) l
 
 (**
   Prints an info atom, i.e an element of the info trace
 *)
-let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((is_success, d, hint, src): trace_atom): t =
-  str (String.make d ' ') ++ hint ++ str " in (" ++ src ++ str ")."
+let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((_, d, hint, src): trace_atom): t =
+  str (String.make d ' ') ++ hint ++ str " //in (" ++ src ++ str ")."
 
 (**
   Prints the complete info trace
 *)
 let pr_trace (env: Environ.env) (sigma: Evd.evar_map) (dbg: debug) = match dbg with
-  | {log_level = Info; trace = {contents=(is_success, d, hint, src)::l}; _} ->
-    Feedback.msg_notice (prlist_with_sep fnl (pr_trace_atom env sigma) (cleanup_info_trace d [(is_success, d, hint, src)] l))
+  | {log_level = Info; trace = {contents=atom::l}; _} ->
+    Feedback.msg_notice (prlist_with_sep fnl (pr_trace_atom env sigma) (cleanup_info_trace [atom] l))
   | _ -> ()
 
 (**

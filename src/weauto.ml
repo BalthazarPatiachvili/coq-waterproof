@@ -183,14 +183,14 @@ and esearch_find (env: Environ.env) (sigma: Evd.evar_map) (db_list: hint_db list
   List.map tac_of_hint flagged_hints
 
 and e_trivial_resolve (env: Environ.env) (sigma: Evd.evar_map) (db_list: hint_db list) (local_db: hint_db) (secvars: Id.Pred.t) (gl: types): unit tactic list =
-  let filter (tac, pr, _) = if Int.equal pr.cost_priority 0 then Some tac else None in
+  let filter (tac, pr, _) = if pr.cost_priority = 0 then Some tac else None in
   try List.map_filter filter (esearch_find env sigma db_list local_db secvars gl)
   with Not_found -> []
 
 (**
   The goal is solved if the cost of solving is null
 *)
-let is_solved (cost: cost): bool = Int.equal cost.cost_subgoals 0
+let is_solved (cost: cost): bool = cost.cost_subgoals = 0
 
 (* Solved comes first *)
 let solve_order (c1: cost) (c2: cost): int = match (is_solved c1, is_solved c2) with
@@ -271,7 +271,7 @@ let branching (delayed_database: delayed_db) (dblist: hint_db list) (local_lemma
 let resolve_esearch (trace: trace) (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_constr list) (state: search_state): search_state tactic =
   let rec explore (state: search_state) (positions: int list) =
     pr_state trace state positions;
-    if Int.equal state.depth 0
+    if state.depth = 0
       then Proofview.tclZERO SearchBound
       else match state.tactics_resolution with
         | [] -> Proofview.tclUNIT state

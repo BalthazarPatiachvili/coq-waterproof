@@ -79,6 +79,13 @@ val hintmap_of :
   (Hints.hint_db -> Hints.FullHint.t list)
 
 (**
+  Searches a sequence of at most [n] tactics within [db_list] and [lems] that solves the goal
+
+  The goal cannot contain evars
+*)
+val search : trace -> int -> Hints.hint_db list -> Tactypes.delayed_open_constr list -> unit Proofview.tactic
+
+(**
   Waterproof auto
 
   This function is a rewrite around coq-core.Auto.auto with the same arguments to be able to retrieve which tactics have been used in case of success.

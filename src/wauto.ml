@@ -67,27 +67,6 @@ let exists_evaluable_reference (env: Environ.env) (evaluable_ref: Tacred.evaluab
 (* All the definitions below are inspired by the coq-core hidden library (i.e not visible in the API) but modified for Waterproof *)
 
 (**
-  Updates the given debug, then print informations if the [log] field is [true]
-*)
-let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Proofview.tactic): 'a Proofview.tactic =
-  Proofview.(
-    tclIFCATCH (
-      tac >>= fun v ->
-      tclENV >>= fun env ->
-      tclEVARMAP >>= fun sigma ->
-      let (hint, src) = pp env sigma in
-      trace.trace := (true, trace.current_depth, hint, src) :: !(trace.trace);
-      tclUNIT v
-    ) tclUNIT (fun (exn,info) ->
-        tclENV >>= fun env ->
-        tclEVARMAP >>= fun sigma ->
-        let (hint, src) = pp env sigma in
-        trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace);
-        tclZERO ~info exn
-    )
-  )
-
-(**
   Prints "idtac" if the [log] field is [true]
 *)
 let pr_info_nop (trace: trace) = if trace.log then Feedback.msg_notice (str "idtac.") else ()
@@ -129,12 +108,12 @@ let hintmap_of (env: Environ.env) (sigma: Evd.evar_map) (secvars: Id.Pred.t) (co
 (**
   Returns a logged [intro] tactic
 *)
-let dbg_intro (trace: trace): unit Proofview.tactic = tclLOG trace (fun _ _ -> (str "intro", str "")) intro
+let dbg_intro (trace: trace): unit Proofview.tactic = Proofutils.tclLOG trace (fun _ _ -> (str "intro", str "")) intro
 
 (**
   Returns a logged [assumption] tactic
 *)
-let dbg_assumption (trace: trace): unit Proofview.tactic = tclLOG trace (fun _ _ -> (str "assumption", str "")) assumption
+let dbg_assumption (trace: trace): unit Proofview.tactic = Proofutils.tclLOG trace (fun _ _ -> (str "assumption", str "")) assumption
 
 (**
   Returns a tactic that apply intro then try to solve the goal
@@ -205,7 +184,7 @@ and tac_of_hint (trace: trace) (db_list: hint_db list) (local_db: hint_db) (conc
     in
     (Proofutils.pr_hint env sigma h, origin)
   in
-  fun h -> tclLOG trace (pr_hint h) (FullHint.run h tactic)
+  fun h -> Proofutils.tclLOG trace (pr_hint h) (FullHint.run h tactic)
 
 (**
   Searches a sequence of at most [n] tactics within [db_list] and [lems] that solves the goal

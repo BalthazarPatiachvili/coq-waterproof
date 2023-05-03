@@ -6,15 +6,6 @@ open Backtracking
 exception SearchBound
 
 (**
-  Updates the given debug, then print informations if the [log] field is [true]
-*)
-val tclLOG :
-  trace ->
-  (Environ.env -> Evd.evar_map -> Pp.t * Pp.t) ->
-  'a Proofview.tactic ->
-  'a Proofview.tactic
-
-(**
   Prints "idtac" if the [log] field is [true]
 *)
 val pr_info_nop : trace -> unit

@@ -112,13 +112,14 @@ let tclLOG (dbg: debug) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Proo
     ) tclUNIT (fun (exn,info) ->
         tclENV >>= fun env ->
         tclEVARMAP >>= fun sigma ->
+        let (hint, src) = pp env sigma in
         match dbg.log_level with
           | Off -> tac
           | Info ->
-            dbg.trace := (false, dbg.current_depth, str "", str "") :: !(dbg.trace);
+
+            dbg.trace := (false, dbg.current_depth, hint, src) :: !(dbg.trace);
             tclZERO ~info exn
           | Debug -> 
-            let (hint, src) = pp env sigma in
             Feedback.msg_notice (str s ++ spc () ++ hint ++ str " in(" ++ src ++ str "). (*fail*)");
             tclZERO ~info exn
     )
@@ -135,8 +136,8 @@ let rec cleanup_info_trace (acc: trace_atom list) (trace: trace_atom list): trac
 (**
   Prints an info atom, i.e an element of the info trace
 *)
-let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((_, d, hint, src): trace_atom): t =
-  str (String.make d ' ') ++ hint ++ str " //in (" ++ src ++ str ")."
+let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((is_success, d, hint, src): trace_atom): t =
+  str (String.make d ' ') ++ str (if is_success then "✓" else "❌") ++ spc () ++ hint ++ str " in (" ++ src ++ str ")."
 
 (**
   Prints the complete info trace

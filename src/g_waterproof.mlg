@@ -6,6 +6,7 @@ open Ltac_plugin
 open Ltac_plugin.G_auto
 open Pp
 
+open Backtracking
 open Exceptions
 open Hint_dataset
 open Proofutils
@@ -57,7 +58,7 @@ TACTIC EXTEND info_wauto
       let print = lazy (
         Proofview.tclUNIT (
           let applied = Backtracking.keep_applied !(trace.trace) in
-          Feedback.msg_notice (str "Applied hints :" ++ (List.fold_left (fun acc (depth, hint, src) -> acc ++ str "\n" ++ Pp.int depth ++ str " " ++ hint ++ str "(" ++ src ++ str ")") (str "") applied));
+          Feedback.msg_notice (str "\nApplied hints :" ++ (List.fold_left (fun acc (depth, hint, src) -> acc ++ str "\n" ++ Pp.int depth ++ str " " ++ hint ++ str "(" ++ src ++ str ")") (str "") applied));
         )
       ) in
       tclRealThen tactic print

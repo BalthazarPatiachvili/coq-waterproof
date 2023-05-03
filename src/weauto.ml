@@ -13,6 +13,7 @@ open Tactics
 open Termops
 open Util
 
+open Backtracking
 open Wauto
 
 (* All the definitions below come from coq-core hidden library (i.e not visible in the API) *)
@@ -281,11 +282,7 @@ let resolve_esearch (trace: trace) (dblist: hint_db list) (local_lemmas: Tactype
             | [] -> explore { state with tactics_resolution = rest } positions
             | gl :: _ ->
               Proofview.Unsafe.tclSETGOALS [gl] <*>
-              let previous_state = match state.previous_search_state with
-                | None -> None
-                | _ -> Some state 
-              in 
-              
+              let previous_state = Some state in 
               branching db dblist local_lemmas >>= fun tacs ->
               let cast ((isrec, mkdb, tac, pp): (bool * delayed_db * unit tactic * Pp.t Lazy.t)): search_state tactic =
                 Proofview.tclONCE tac >>= fun () ->

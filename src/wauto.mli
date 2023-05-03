@@ -15,24 +15,24 @@ type trace_atom =
   * Pp.t
 
 (**
-  Debug type
+  Trace type
 *)
-type debug = {
+type trace = {
   log_level: Hints.debug; (** Log level ([Off], [Info] or [Debug]) *)
   current_depth: int; (** The current depth of the search *)
   trace: trace_atom list ref (** The full trace of tried hints *)
 }
 
 (**
-  Creates a [debug] value from a [Hints.debug] value
+  Creates a [trace] value from a [Hints.debug] value
 *)
-val new_debug : Hints.debug -> debug
+val new_trace : Hints.debug -> trace
 
 (**
   Updates the given debug and print informations according to the field [Hints.debug]
 *)
 val tclLOG :
-  debug ->
+  trace ->
   (Environ.env -> Evd.evar_map -> Pp.t * Pp.t) ->
   'a Proofview.tactic ->
   'a Proofview.tactic
@@ -50,21 +50,21 @@ val pr_trace_atom :
   Prints the complete info trace
 *)
 val pr_trace :
-  Environ.env -> Evd.evar_map -> debug -> unit
+  Environ.env -> Evd.evar_map -> trace -> unit
 
 (**
   Prints "idtac" if the [Hints.debug] level is [Info]
 *)
-val pr_info_nop : debug -> unit
+val pr_info_nop : trace -> unit
 
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
 val tclTRY_dbg :
-  debug ->
-  (debug -> unit) ->
-  (Environ.env -> Evd.evar_map -> debug -> unit) ->
-  (debug -> unit) ->
+  trace ->
+  (trace -> unit) ->
+  (Environ.env -> Evd.evar_map -> trace -> unit) ->
+  (trace -> unit) ->
   unit Proofview.tactic ->
   unit Proofview.tactic
 
@@ -83,10 +83,10 @@ val hintmap_of :
 
   This function is a rewrite around coq-core.Auto.auto with the same arguments to be able to retrieve which tactics have been used in case of success.
 
-  The given [debug] will be updated with the trace at the end of the execution (consider using).
+  The given [trace] will be updated with the trace at the end of the execution (consider using).
 *)
 val wauto :
-  debug ->
+  trace ->
   int ->
   Tactypes.delayed_open_constr list ->
   string list ->

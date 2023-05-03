@@ -8,7 +8,7 @@
   The code structure has been rearranged to match the one of [Wauto.wauto].
 *)
 val weauto :
-  Wauto.debug ->
+  Wauto.trace ->
   int ->
   Tactypes.delayed_open_constr list ->
   string list ->

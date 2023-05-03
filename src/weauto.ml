@@ -84,8 +84,6 @@ type delayed_db = Environ.env -> Evd.evar_map -> hint_db
 type search_state = {
   depth: int; (** Depth remaining before failing *)
   tactics_resolution: (Proofview_monad.goal_with_state * delayed_db) list; (** TODO *)
-  last_tactic: Pp.t; (** Name of the last tactic used *)
-  previous_search_state: search_state option (** Pointer to the previous search state, and is none if this is the first state *)
 }
 
 (**
@@ -95,67 +93,14 @@ let initial_state (evk: Proofview_monad.goal_with_state) (local_db: delayed_db) 
   {
     depth = n;
     tactics_resolution = [(evk, local_db)];
-    last_tactic = mt ();
-    previous_search_state = None
   }
 
 let max_depth: int ref = ref 0
 
 (**
-  Prints a debug header according to the [Hints.debug] level
+  Prints a debug header if [log] is [true]
 *)
-let pr_dbg_header (trace: trace): unit = match trace.log_level with
-  | Off -> ()
-  | Debug -> Feedback.msg_notice (str "(* debug eauto: *)")
-  | Info  -> Feedback.msg_notice (str "(* info eauto: *)")
-
-(**
-  Prints the given state if the log level is [Hints.Info]
-*)
-let pr_state (trace: trace) (state: search_state): unit = match trace.log_level with
-  | Off -> ()
-  | Info ->
-    let rec min_depth (state: search_state): int = match state.previous_search_state with
-      | None -> state.depth
-      | Some s ->
-        let dpt = min_depth s in
-        let ident = String.make (dpt - s.depth) ' ' in
-        Feedback.msg_notice (str ident ++ s.last_tactic ++ str ".");
-        dpt
-    in ignore (min_depth state)
-  | Debug -> 
-    let message = str "* " ++ state.last_tactic in
-    Feedback.msg_notice (str (String.make (!max_depth - state.depth) ' ') ++ message)
-
-(**
-  Updates the given trace and prints informations according to the field [Hints.debug]
-*)
-let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Proofview.tactic): 'a Proofview.tactic =
-  let s = String.make (trace.current_depth + 1) '*' in
-  Proofview.(
-    tclIFCATCH (
-      tac >>= fun v ->
-      tclENV >>= fun env ->
-      tclEVARMAP >>= fun sigma ->
-      let (hint, src) = pp env sigma in
-      trace.trace := (true, trace.current_depth, hint, src) :: !(trace.trace);
-      if trace.log_level = Debug then Feedback.msg_notice (str s ++ spc () ++ hint ++ str " in(" ++ src ++ str "). (*success*)");
-      tclUNIT v
-    ) tclUNIT (fun (exn,info) ->
-        tclENV >>= fun env ->
-        tclEVARMAP >>= fun sigma ->
-        let (hint, src) = pp env sigma in
-        match trace.log_level with
-          | Off -> tac
-          | Info ->
-
-            trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace);
-            tclZERO ~info exn
-          | Debug -> 
-            Feedback.msg_notice (str s ++ spc () ++ hint ++ str " in(" ++ src ++ str "). (*fail*)");
-            tclZERO ~info exn
-    )
-  )
+let pr_dbg_header (trace: trace) = if trace.log then Feedback.msg_notice (str "(* info weauto: *)") else ()
 
 let rec e_trivial_fail_db (trace: trace) (db_list: hint_db list) (local_db: hint_db): unit tactic =
   let next = Proofview.Goal.enter begin fun gl ->
@@ -270,7 +215,8 @@ let branching (trace: trace) (delayed_database: delayed_db) (dblist: hint_db lis
         let mkdb (env: Environ.env) (sigma: Evd.evar_map): 'a = assert false in 
 
         let map_assum (id: variable): (bool * (Environ.env -> Evd.evar_map -> hint_db) * unit tactic * Pp.t) =
-          (false, mkdb, e_give_exact (mkVar id), str "exact" ++ str " " ++ Id.print id)
+          let hint =  str "exact" ++ str " " ++ Id.print id in
+          (false, mkdb, tclLOG trace (fun _ _ -> (hint, str "")) @@ e_give_exact (mkVar id), hint)
         in List.map map_assum (ids_of_named_context hyps)
       in
 
@@ -278,9 +224,10 @@ let branching (trace: trace) (delayed_database: delayed_db) (dblist: hint_db lis
       let intro_tac: (bool * (Environ.env -> Evd.evar_map -> hint_db) * unit tactic * Pp.t) =
         let mkdb (env: Environ.env) (sigma: Evd.evar_map): hint_db =
           push_resolve_hyp env sigma (Declaration.get_id (List.hd (EConstr.named_context env))) db
-        in (false, mkdb, Tactics.intro, str "intro")
+        in (false, mkdb, tclLOG trace (fun _ _ -> (str "intro", str "")) Tactics.intro, str "intro")
       in
 
+      let new_trace = incr_trace_depth trace in
       (* Construction of tactics derivated from hint databases *)
       let rec_tacs: (bool * (Environ.env -> Evd.evar_map -> hint_db) * unit tactic * Pp.t) list tactic =
         let mkdb (env: Environ.env) (sigma: Evd.evar_map): hint_db =
@@ -289,7 +236,7 @@ let branching (trace: trace) (delayed_database: delayed_db) (dblist: hint_db lis
             then db
             else make_local_hint_db env sigma ~ts:TransparentState.full true local_lemmas
         in try 
-          esearch_find trace env sigma dblist db secvars concl
+          esearch_find new_trace env sigma dblist db secvars concl
             |> List.sort compare
             |> List.map (fun (tac, _, pp) -> (true, mkdb, tac, pp))
             |> Proofview.tclUNIT
@@ -315,7 +262,6 @@ let resolve_esearch (trace: trace) (dblist: hint_db list) (local_lemmas: Tactype
             | [] -> explore { state with tactics_resolution = rest }
             | gl :: _ ->
               Proofview.Unsafe.tclSETGOALS [gl] <*>
-              let previous_state = Some state in 
               branching trace db dblist local_lemmas >>= fun tacs ->
               let cast ((isrec, mkdb, tac, pp): (bool * delayed_db * unit tactic * Pp.t)): search_state tactic =
                 Proofview.tclONCE tac >>= fun () ->
@@ -327,7 +273,7 @@ let resolve_esearch (trace: trace) (dblist: hint_db list) (local_lemmas: Tactype
                     then pred state.depth
                     else state.depth
                 in
-                Proofview.tclUNIT { depth; tactics_resolution = List.map join lgls @ rest; last_tactic = pp; previous_search_state = previous_state }
+                Proofview.tclUNIT { depth; tactics_resolution = List.map join lgls @ rest }
               in
               tacs
                 |> List.map cast
@@ -353,7 +299,6 @@ let esearch (trace: trace) (depth: int) (lems: Tactypes.delayed_open_constr list
   Proofview.Goal.enter begin fun gl ->
   let local_db env sigma = make_local_hint_db env sigma ~ts:TransparentState.full true lems in
   let tac (s: search_state): search_state tactic = resolve_esearch trace db_list lems s in
-  pr_dbg_header trace;
   Proofview.tclORELSE
     begin
       let evk = Proofview.goal_with_state (Proofview.Goal.goal gl) (Proofview.Goal.state gl) in
@@ -375,7 +320,7 @@ let esearch (trace: trace) (depth: int) (lems: Tactypes.delayed_open_constr list
 let gen_weauto (trace: trace) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list) (db_names: hint_db_name list): unit tactic =
   Proofview.wrap_exceptions @@ fun () ->
   let db_list = make_db_list db_names in
-  Hints.wrap_hint_warning @@ esearch trace n lems db_list
+  Hints.wrap_hint_warning @@ tcl_try_dbg trace pr_dbg_header @@ esearch trace n lems db_list
 
 (**
   Waterproof eauto

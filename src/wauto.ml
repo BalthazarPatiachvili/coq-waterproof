@@ -67,15 +67,9 @@ let exists_evaluable_reference (env: Environ.env) (evaluable_ref: Tacred.evaluab
 (* All the definitions below are inspired by the coq-core hidden library (i.e not visible in the API) but modified for Waterproof *)
 
 (**
-  Increases the debug depth by 1
-*)
-let incr_trace_depth (trace: trace): trace = {log_level = trace.log_level; current_depth = trace.current_depth + 1; trace = trace.trace}
-
-(**
-  Updates the given trace and prints informations according to the field [Hints.debug]
+  Updates the given debug, then print informations if the [log] field is [true]
 *)
 let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Proofview.tactic): 'a Proofview.tactic =
-  let s = String.make (trace.current_depth + 1) '*' in
   Proofview.(
     tclIFCATCH (
       tac >>= fun v ->
@@ -83,52 +77,38 @@ let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> t * t) (tac: 'a Pr
       tclEVARMAP >>= fun sigma ->
       let (hint, src) = pp env sigma in
       trace.trace := (true, trace.current_depth, hint, src) :: !(trace.trace);
-      if trace.log_level = Debug then Feedback.msg_notice (str s ++ spc () ++ hint ++ str " in(" ++ src ++ str "). (*success*)");
       tclUNIT v
     ) tclUNIT (fun (exn,info) ->
         tclENV >>= fun env ->
         tclEVARMAP >>= fun sigma ->
         let (hint, src) = pp env sigma in
-        match trace.log_level with
-          | Off -> tac
-          | Info ->
-
-            trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace);
-            tclZERO ~info exn
-          | Debug -> 
-            Feedback.msg_notice (str s ++ spc () ++ hint ++ str " in(" ++ src ++ str "). (*fail*)");
-            tclZERO ~info exn
+        trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace);
+        tclZERO ~info exn
     )
   )
 
 (**
-  Prints "idtac" if the [Hints.debug] level is [Info]
+  Prints "idtac" if the [log] field is [true]
 *)
-let pr_info_nop (trace: trace) = match trace.log_level with
-  | Info -> Feedback.msg_notice (str "idtac.")
-  | _ -> ()
+let pr_info_nop (trace: trace) = if trace.log then Feedback.msg_notice (str "idtac.") else ()
 
 (** 
-  Prints a debug header according to the [Hints.debug] level
+  Prints a debug header if [log] is [true]
 *)
-let pr_dbg_header (trace: trace) = match trace.log_level with
-  | Off -> ()
-  | Info -> Feedback.msg_notice (str "(* info wauto: *)")
-  | Debug -> Feedback.msg_notice (str "(* debug wauto: *)")
+let pr_dbg_header (trace: trace) = if trace.log then Feedback.msg_notice (str "(* info wauto: *)") else ()
 
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
-let tclTRY_dbg (trace: trace) (debug_header_printer : trace -> unit) (info_trace_printer: Environ.env -> Evd.evar_map -> trace -> unit
-) (info_nop_printer: trace -> unit) (tac: unit Proofview.tactic): unit Proofview.tactic =
+let tcl_try_dbg (trace: trace) (debug_header_printer : trace -> unit) (tac: unit Proofview.tactic): unit Proofview.tactic =
   let delay f = Proofview.tclUNIT () >>= fun () -> f () in
   let tac =
     delay (fun () -> debug_header_printer trace; tac) >>= fun () ->
       Proofview.tclENV >>= fun env ->
       Proofview.tclEVARMAP >>= fun sigma ->
-        info_trace_printer env sigma trace;
+        pr_trace env sigma trace;
       Proofview.tclUNIT () in
-  let after = delay (fun () -> info_nop_printer trace; Proofview.tclUNIT ()) in
+  let after = delay (fun () -> pr_info_nop trace; Proofview.tclUNIT ()) in
   Tacticals.tclORELSE0 tac after
 
 (**
@@ -251,7 +231,7 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
           let sigma = Proofview.Goal.sigma gl in
           let concl = Proofview.Goal.concl gl in
           let hyps = Proofview.Goal.hyps gl in
-          let d' = incr_trace_depth trace in
+          let new_trace = incr_trace_depth trace in
           let secvars = compute_secvars gl in
           let hintmap = hintmap_of env sigma secvars  concl in
           let hinttac = tac_of_hint trace db_list local_db concl in
@@ -266,7 +246,7 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
                       let local_db' =
                         if hyps' == hyps then local_db else make_local_db gl
                       in
-                      search d' (n-1) local_db'
+                      search new_trace (n-1) local_db'
                     end
               end
             |> Tacticals.tclFIRST
@@ -289,7 +269,7 @@ let gen_wauto (trace: trace) ?(n: int = 5) (lems: Tactypes.delayed_open_constr l
       | Some dbnames -> make_db_list dbnames
       | None -> current_pure_db ()
     in
-    wrap_hint_warning @@ tclTRY_dbg trace pr_dbg_header pr_trace pr_info_nop @@ search trace n db_list lems
+    wrap_hint_warning @@ tcl_try_dbg trace pr_dbg_header @@ search trace n db_list lems
   end
 
 (**

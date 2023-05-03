@@ -10,23 +10,28 @@ type trace_atom =
   * Pp.t
 
 (**
-  Trace type
+  Debug type
 *)
 type trace = {
-  log_level: Hints.debug; (** Log level ([Off], [Info] or [Debug]) *)
+  log: bool; (** Are tried hints logged ? *)
   current_depth: int; (** The current depth of the search *)
   trace: trace_atom list ref (** The full trace of tried hints *)
 }
 
 (**
-  Creates a [trace] value from a [Hints.debug] value
+  Increases the debug depth by 1
 *)
-val new_trace : Hints.debug -> trace
+val incr_trace_depth : trace -> trace
 
 (**
-  Returns a [trace] value corresponding to `no debug`
+  Returns a [trace] value corresponding to [no trace recording]
 *)
 val no_trace : unit -> trace
+
+(**
+  Creates a [trace] value given a boolean indicating if tried hints are printed
+*)
+val new_trace : bool -> trace
 
 (**
   Prints the complete info trace

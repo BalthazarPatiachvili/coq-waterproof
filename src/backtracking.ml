@@ -11,20 +11,25 @@ type trace_atom = bool * int * t * t
   Debug type
 *)
 type trace = {
-  log_level: Hints.debug; (** Log level ([Off], [Info] or [Debug]) *)
+  log: bool; (** Are tried hints printed ? *)
   current_depth: int; (** The current depth of the search *)
   trace: trace_atom list ref (** The full trace of tried hints *)
 }
 
 (**
-  Returns a [trace] value corresponding to [no trace recording]
+  Increases the debug depth by 1
 *)
-let no_trace (): trace = {log_level = Off; current_depth = 0; trace = ref []}
+let incr_trace_depth (trace: trace): trace = {log = trace.log; current_depth = trace.current_depth + 1; trace = trace.trace}
 
 (**
-  Creates a [debug] value from a [Hints.debug] value
+  Returns a [trace] value corresponding to [no trace recording]
 *)
-let new_trace (debug: Hints.debug): trace = {log_level = debug; current_depth = 0; trace = ref []}
+let no_trace (): trace = {log = false; current_depth = 0; trace = ref []}
+
+(**
+  Creates a [trace] value given a boolean indicating if tried hints are printed
+*)
+let new_trace (log: bool): trace = {log = log; current_depth = 0; trace = ref []}
 
 (**
   Cleans up the trace with a higher depth than the given [depth]
@@ -44,7 +49,7 @@ let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((is_success, d, hint
   Prints the complete info trace
 *)
 let pr_trace (env: Environ.env) (sigma: Evd.evar_map) (trace: trace): unit = match trace with
-  | {log_level = Info; trace = {contents=atom::l}; _} ->
+  | {log = true; trace = {contents=atom::l}; _} ->
     Feedback.msg_notice (prlist_with_sep fnl (pr_trace_atom env sigma) (cleanup_info_trace [atom] l))
   | _ -> ()
 

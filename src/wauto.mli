@@ -6,7 +6,7 @@ open Backtracking
 exception SearchBound
 
 (**
-  Updates the given debug and print informations according to the field [Hints.debug]
+  Updates the given debug, then print informations if the [log] field is [true]
 *)
 val tclLOG :
   trace ->
@@ -15,17 +15,15 @@ val tclLOG :
   'a Proofview.tactic
 
 (**
-  Prints "idtac" if the [Hints.debug] level is [Info]
+  Prints "idtac" if the [log] field is [true]
 *)
 val pr_info_nop : trace -> unit
 
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
-val tclTRY_dbg :
+val tcl_try_dbg :
   trace ->
-  (trace -> unit) ->
-  (Environ.env -> Evd.evar_map -> trace -> unit) ->
   (trace -> unit) ->
   unit Proofview.tactic ->
   unit Proofview.tactic

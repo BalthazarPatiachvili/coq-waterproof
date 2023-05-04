@@ -42,7 +42,7 @@ let eval_uconstrs ist cs =
 TACTIC EXTEND wauto
   | [ "wauto" auto_using(lems) ] ->
     {
-      let trace = new_trace true in
+      let trace = new_trace false in
       wauto trace 5 (eval_uconstrs ist lems) (get_current_databases Positive)
     }
 END

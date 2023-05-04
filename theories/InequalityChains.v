@@ -8,7 +8,7 @@ Inductive GreaterRel := | chain_gt | chain_ge.
 
 (** * Types of chains. *)
 
-(** ** Only contains =-relations. *)
+(** ** Only contains =- relations. *)
 
 Inductive EqualChain (T : Type) :=
   | base_ec : T -> EqualRel * T -> EqualChain T

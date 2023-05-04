@@ -49,7 +49,7 @@ let core: hint_dataset = {
 
 let algebra: hint_dataset = {
   name = "Algebra";
-  positive_databases: hint_db_name list = ["arith"; "wp_algebra"; "wp_classical_logic"; "wp_constructive_logic"; "wp_integers"; "zarith"];
+  positive_databases: hint_db_name list = ["wp_core"; "arith"; "wp_algebra"; "wp_classical_logic"; "wp_constructive_logic"; "wp_integers"; "zarith"];
   negative_databases: hint_db_name list = ["nocore"; "wp_negation_nat"; "wp_negation_int"];
   decidability_databases: hint_db_name list = ["nocore"; "wp_decidability_classical"; "wp_decidability_nat"];
   shorten_databases: hint_db_name list = ["wp_classical_logic"; "wp_constructive_logic"; "wp_core"];

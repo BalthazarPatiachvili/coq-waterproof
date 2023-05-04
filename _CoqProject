@@ -27,6 +27,8 @@ src/wauto.ml
 src/wauto.mli
 src/weauto.ml
 src/weauto.mli
+src/waterprove.ml
+src/waterprove.mli
 src/databases.mlg
 src/g_waterproof.mlg
 src/waterproof.mlpack

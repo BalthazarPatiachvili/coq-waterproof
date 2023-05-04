@@ -37,7 +37,6 @@ jobs:
               opam install -y -v odoc
 
               opam exec -- dune build @doc
-              ls -R
               mv _build/default/_doc/_html/ docs/ocaml
 
               mkdir docs/coq

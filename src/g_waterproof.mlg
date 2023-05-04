@@ -11,6 +11,7 @@ open Exceptions
 open Hint_dataset
 open Proofutils
 open Wauto
+open Waterprove
 open Weauto
 
 }
@@ -131,5 +132,12 @@ TACTIC EXTEND rwauto
         )
       ) in
       tclRealThen tactic print
+    }
+END
+
+TACTIC EXTEND shield
+  | [ "shield" ] ->
+    {
+      shield_test ()
     }
 END

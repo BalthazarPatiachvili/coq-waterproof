@@ -39,9 +39,9 @@ val new_trace : bool -> trace
 val pr_trace : Environ.env -> Evd.evar_map -> trace -> unit
 
 (**
-  Returns the trace atoms that have been actually applied during [wauto]
+  Returns the trace atoms that have been actually applied during {! Wauto.wauto}
 
-  It is supposed here that the given [trace] has not been modified since the end of [wauto] and that [wauto] is successful, i.e it succeed to solve the goal
+  It is supposed here that the given [trace] has not been modified since the end of {! Wauto.wauto}.
 *)
 val keep_applied :
   trace_atom list -> (int * Pp.t * Pp.t) list

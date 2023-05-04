@@ -54,9 +54,9 @@ let pr_trace (env: Environ.env) (sigma: Evd.evar_map) (trace: trace): unit = mat
   | _ -> ()
 
 (**
-  Returns the trace atoms that have been actually applied during [wauto] under the form `(depth, hint_name, hint_database_source)`
+  Returns the trace atoms that have been actually applied during {! Wauto.wauto}
 
-  It is supposed here that the given [trace] has not been modified since the end of [wauto]
+  It is supposed here that the given [trace] has not been modified since the end of {! Wauto.wauto}.
 *)
 let keep_applied (trace: trace_atom list): (int * t * t) list = 
   List.rev @@ 

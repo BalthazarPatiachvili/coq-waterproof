@@ -315,7 +315,7 @@ let esearch (trace: trace) (depth: int) (lems: Tactypes.delayed_open_constr list
   end
 
 (**
-  Generates the [weauto] function
+  Generates the {! weauto} function
 *)
 let gen_weauto (trace: trace) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list) (db_names: hint_db_name list): unit tactic =
   Proofview.wrap_exceptions @@ fun () ->

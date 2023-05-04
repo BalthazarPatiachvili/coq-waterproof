@@ -8,6 +8,7 @@ open Proofview
 open Backtracking
 open Exceptions
 open Hint_dataset
+open Hint_dataset_declarations
 open Wauto
 
 (**
@@ -79,15 +80,16 @@ let automation_routine (depth: int) (lems: Tactypes.delayed_open_constr list) (d
   The forbidden patterns are defined in {! is_forbidden}.
 
   Arguments:
-    - [depth] (int): max depth of the proof search
-    - [shield] (bool): if set to [true], will stop the proof search if a forbidden pattern is found
-    - [lems] (Tactypes.delayed_open_constr list): additional lemmas that are given to solve the proof
+    - [depth] ([int]): max depth of the proof search
+    - [shield] ([bool]): if set to [true], will stop the proof search if a forbidden pattern is found
+    - [lems] ([Tactypes.delayed_open_constr list]): additional lemmas that are given to solve the proof
+    - [database_type] ([Hint_dataset_declarations]): type of databases that will be use as hint databases
 *)
-let waterprove (depth: int) ?(shield: bool = false) (lems: Tactypes.delayed_open_constr list): unit tactic =
+let waterprove (depth: int) ?(shield: bool = false) (lems: Tactypes.delayed_open_constr list) (database_type: database_type): unit tactic =
   Proofview.Goal.enter @@ fun goal ->
     begin
       let sigma = Proofview.Goal.sigma goal in
       let conclusion = Proofview.Goal.concl goal in
       if is_forbidden sigma conclusion then throw (FailedAutomation "The current goal cannot be proved since it contains shielded patterns");
-      automation_routine depth lems (positive_databases ())
+      automation_routine depth lems (get_current_databases database_type)
     end

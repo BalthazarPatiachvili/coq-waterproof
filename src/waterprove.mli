@@ -20,12 +20,14 @@ val shield_test : unit -> unit Proofview.tactic
   The forbidden patterns are defined in {! is_forbidden}.
 
   Arguments:
-    - [depth] (int): max depth of the proof search
-    - [shield] (bool): if set to [true], will stop the proof search if a forbidden pattern is found
-    - [lems] (Tactypes.delayed_open_constr list): additional lemmas that are given to solve the proof
+    - [depth] ([int]): max depth of the proof search
+    - [shield] ([bool]): if set to [true], will stop the proof search if a forbidden pattern is found
+    - [lems] ([Tactypes.delayed_open_constr list]): additional lemmas that are given to solve the proof
+    - [database_type] ([Hint_dataset_declarations]): type of databases that will be use as hint databases
 *)
 val waterprove :
   int ->
   ?shield:bool ->
   Tactypes.delayed_open_constr list ->
+  Hint_dataset_declarations.database_type ->
   unit Proofview.tactic

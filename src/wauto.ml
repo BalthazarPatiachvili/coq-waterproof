@@ -238,7 +238,7 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
   end
 
 (** 
-  Generates the [wauto] function
+  Generates the {! wauto} function
 *)
 let gen_wauto (trace: trace) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list) (dbnames: hint_db_name list option) =
   Hints.wrap_hint_warning @@

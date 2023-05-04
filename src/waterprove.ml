@@ -1,9 +1,14 @@
 open Constr
 open EConstr
+open Exninfo
+open Hints
 open Pp
 open Proofview
 
+open Backtracking
 open Exceptions
+open Hint_dataset
+open Wauto
 
 (**
   List of forbidden inductive types
@@ -50,6 +55,20 @@ let shield_test (): unit tactic =
       tclUNIT ()
     end
 
+let automation_routine (depth: int) (lems: Tactypes.delayed_open_constr list) (databases: hint_db_name list): unit tactic =
+  tclORELSE
+    begin
+      wauto (new_trace false) depth lems databases
+    end
+    begin
+      fun (exn, info) ->
+        throw (FailedAutomation (
+          match get_backtrace info with
+            | None -> "could not find a proof for the current goal"
+            | Some backtrace -> backtrace_to_string backtrace
+        ))
+    end
+
 (**
   Waterprove
 
@@ -67,10 +86,8 @@ let shield_test (): unit tactic =
 let waterprove (depth: int) ?(shield: bool = false) (lems: Tactypes.delayed_open_constr list): unit tactic =
   Proofview.Goal.enter @@ fun goal ->
     begin
-      let env = Proofview.Goal.env goal in
       let sigma = Proofview.Goal.sigma goal in
       let conclusion = Proofview.Goal.concl goal in
-      Feedback.msg_notice (Printer.pr_etype_env env sigma conclusion);
-      if is_forbidden sigma conclusion then throw (FailedAutomation "Coucou");
-      tclUNIT ()
+      if is_forbidden sigma conclusion then throw (FailedAutomation "The current goal cannot be proved since it contains shielded patterns");
+      automation_routine depth lems (positive_databases ())
     end

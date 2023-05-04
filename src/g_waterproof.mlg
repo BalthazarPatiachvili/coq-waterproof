@@ -141,3 +141,10 @@ TACTIC EXTEND shield
       shield_test ()
     }
 END
+
+TACTIC EXTEND waterprove
+  | [ "waterprove" auto_using(lems) ] ->
+    {
+      waterprove 5 ?shield:(Some true) (eval_uconstrs ist lems)
+    }
+END

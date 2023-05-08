@@ -5,7 +5,6 @@ open Hints
 open Pp
 open Proofview
 
-open Backtracking
 open Exceptions
 open Hint_dataset
 open Hint_dataset_declarations
@@ -59,7 +58,7 @@ let shield_test (): unit tactic =
 let automation_routine (depth: int) (lems: Tactypes.delayed_open_constr list) (databases: hint_db_name list): unit tactic =
   tclORELSE
     begin
-      wauto (new_trace false) depth lems databases
+      tclIGNORE @@ wauto false depth lems databases
     end
     begin
       fun (exn, info) ->

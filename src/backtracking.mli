@@ -1,4 +1,9 @@
 (**
+  Exception raised if no proof of the goal is found
+*)
+exception SearchBound
+
+(**
   Trace atome type
 
   Can be read as `(is_success, depth, print_function_option, hint_name, hint_db_source)`
@@ -15,7 +20,7 @@ type trace_atom =
 type trace = {
   log: bool; (** Are tried hints logged ? *)
   current_depth: int; (** The current depth of the search *)
-  trace: trace_atom list ref (** The full trace of tried hints *)
+  trace: trace_atom list (** The full trace of tried hints *)
 }
 
 (**

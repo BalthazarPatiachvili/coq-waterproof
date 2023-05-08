@@ -16,12 +16,16 @@ val tail_end : 'a list -> int -> 'a list
 (**
   Rewrite of [Auto.tclLOG]
 
-  Updates the given debug, then print informations if the [log] field is [true]
+  Updates the given trace, then print informations if the [log] field is [true].
+
+  Fails if the hint's name is forbidden, or if the proof will be complete without using all must-use lemmas.
 *)
-  val tclLOG :
+val tclLOG :
   Backtracking.trace ->
   (Environ.env -> Evd.evar_map -> Pp.t * Pp.t) ->
   'a Proofview.tactic ->
+  Pp.t list ->
+  Pp.t list ->
   'a Proofview.tactic
 
 (**

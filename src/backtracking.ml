@@ -1,6 +1,11 @@
 open Pp
 
 (**
+  Exception raised if no proof of the goal is found
+*)
+exception SearchBound
+
+(**
   Trace atome type
 
   Can be read as `(is_success, depth, current_proof_state`, print_function_option, hint_name, hint_db_source)`
@@ -13,7 +18,7 @@ type trace_atom = bool * int * t * t
 type trace = {
   log: bool; (** Are tried hints printed ? *)
   current_depth: int; (** The current depth of the search *)
-  trace: trace_atom list ref (** The full trace of tried hints *)
+  trace: trace_atom list (** The full trace of tried hints *)
 }
 
 (**
@@ -24,12 +29,12 @@ let incr_trace_depth (trace: trace): trace = {log = trace.log; current_depth = t
 (**
   Returns a [trace] value corresponding to [no trace recording]
 *)
-let no_trace (): trace = {log = false; current_depth = 0; trace = ref []}
+let no_trace (): trace = {log = false; current_depth = 0; trace = []}
 
 (**
   Creates a [trace] value given a boolean indicating if tried hints are printed
 *)
-let new_trace (log: bool): trace = {log = log; current_depth = 0; trace = ref []}
+let new_trace (log: bool): trace = {log = log; current_depth = 0; trace = []}
 
 (**
   Cleans up the trace with a higher depth than the given [depth]
@@ -49,7 +54,8 @@ let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((is_success, d, hint
   Prints the complete info trace
 *)
 let pr_trace (env: Environ.env) (sigma: Evd.evar_map) (trace: trace): unit = match trace with
-  | {log = true; trace = {contents=atom::l}; _} ->
+  | {log = true; trace = atom::l; _} ->
+    Feedback.msg_notice (str "Trace:");
     Feedback.msg_notice (prlist_with_sep fnl (pr_trace_atom env sigma) (cleanup_info_trace [atom] l))
   | _ -> ()
 

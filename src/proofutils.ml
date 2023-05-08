@@ -1,4 +1,5 @@
 open Hints
+open Proofview
 open Proofview.Notations
 
 open Backtracking
@@ -39,22 +40,26 @@ let rec tail_end (l: 'a list) (n: int): 'a list = match (l, n) with
 module StringMap = Map.Make(String)
 
 (**
-  Updates the given debug, then print informations if the [log] field is [true]
+  Rewrite of [Auto.tclLOG]
+
+  Updates the given trace, then print informations if the [log] field is [true].
+
+  Fails if the hint's name is forbidden, or if the proof will be complete without using all must-use lemmas.
 *)
-let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac: 'a Proofview.tactic): 'a Proofview.tactic =
+let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac: 'a tactic) (must_use: Pp.t list) (forbidden: Pp.t list): 'a tactic =
   Proofview.(
     tclIFCATCH (
       tac >>= fun v ->
       tclENV >>= fun env ->
       tclEVARMAP >>= fun sigma ->
-      let (hint, src) = pp env sigma in
-      trace.trace := (true, trace.current_depth, hint, src) :: !(trace.trace);
+      (* let (hint, src) = pp env sigma in
+      trace.trace := (true, trace.current_depth, hint, src) :: !(trace.trace); *)
       tclUNIT v
     ) tclUNIT (fun (exn,info) ->
         tclENV >>= fun env ->
         tclEVARMAP >>= fun sigma ->
-        let (hint, src) = pp env sigma in
-        trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace);
+        (* let (hint, src) = pp env sigma in
+        trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace); *)
         tclZERO ~info exn
     )
   )
@@ -62,8 +67,8 @@ let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac:
 (**
   Wrapper around [Proofview.tclTHEN] who actually execute the first tactic before the second
 *)
-let tclRealThen (first: unit Proofview.tactic) (second: unit Proofview.tactic lazy_t): unit Proofview.tactic =
-  Proofview.tclBIND first (fun () -> Proofview.tclTHEN (Proofview.tclUNIT ()) (Lazy.force second))
+let tclRealThen (first: unit tactic) (second: unit tactic lazy_t): unit tactic =
+  tclBIND first (fun () -> tclTHEN (tclUNIT ()) (Lazy.force second))
 
 (**
   Rewrite of Coq's hint printer to keep only the necessary parts

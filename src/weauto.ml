@@ -100,7 +100,7 @@ let max_depth: int ref = ref 0
 (**
   Prints a debug header if [log] is [true]
 *)
-let pr_dbg_header (trace: trace) = if trace.log then Feedback.msg_notice (str "(* info weauto: *)") else ()
+(* let pr_dbg_header (trace: trace) = if trace.log then Feedback.msg_notice (str "(* info weauto: *)") else () *)
 
 let rec e_trivial_fail_db (trace: trace) (db_list: hint_db list) (local_db: hint_db): unit tactic =
   let next = Proofview.Goal.enter begin fun gl ->
@@ -157,7 +157,7 @@ and esearch_find (trace: trace) (env: Environ.env) (sigma: Evd.evar_map) (db_lis
       (Proofutils.pr_hint env sigma h, origin)
     in
     (* We cannot determine statically the cost of subgoals of an Extern hint, so approximate it by the hint's priority. *)
-    let tactic = Proofutils.tclLOG trace (pr_hint hint) @@ FullHint.run hint tac in
+    let tactic = Proofutils.tclLOG trace (pr_hint hint) (FullHint.run hint tac) [] [] in
     (tactic, cost, FullHint.print env sigma hint)
   in
   List.map tac_of_hint flagged_hints
@@ -216,7 +216,7 @@ let branching (trace: trace) (delayed_database: delayed_db) (dblist: hint_db lis
 
         let map_assum (id: variable): (bool * (Environ.env -> Evd.evar_map -> hint_db) * unit tactic * Pp.t) =
           let hint =  str "exact" ++ str " " ++ Id.print id in
-          (false, mkdb, Proofutils.tclLOG trace (fun _ _ -> (hint, str "")) @@ e_give_exact (mkVar id), hint)
+          (false, mkdb, Proofutils.tclLOG trace (fun _ _ -> (hint, str "")) (e_give_exact (mkVar id)) [] [], hint)
         in List.map map_assum (ids_of_named_context hyps)
       in
 
@@ -224,7 +224,7 @@ let branching (trace: trace) (delayed_database: delayed_db) (dblist: hint_db lis
       let intro_tac: (bool * (Environ.env -> Evd.evar_map -> hint_db) * unit tactic * Pp.t) =
         let mkdb (env: Environ.env) (sigma: Evd.evar_map): hint_db =
           push_resolve_hyp env sigma (Declaration.get_id (List.hd (EConstr.named_context env))) db
-        in (false, mkdb, Proofutils.tclLOG trace (fun _ _ -> (str "intro", str "")) Tactics.intro, str "intro")
+        in (false, mkdb, Proofutils.tclLOG trace (fun _ _ -> (str "intro", str "")) Tactics.intro [] [], str "intro")
       in
 
       let new_trace = incr_trace_depth trace in
@@ -320,7 +320,7 @@ let esearch (trace: trace) (depth: int) (lems: Tactypes.delayed_open_constr list
 let gen_weauto (trace: trace) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list) (db_names: hint_db_name list): unit tactic =
   Proofview.wrap_exceptions @@ fun () ->
   let db_list = make_db_list db_names in
-  Hints.wrap_hint_warning @@ tcl_try_dbg trace pr_dbg_header @@ esearch trace n lems db_list
+  (* Hints.wrap_hint_warning @@ tcl_try_dbg pr_dbg_header @@  *)esearch trace n lems db_list
 
 (**
   Waterproof eauto

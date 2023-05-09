@@ -33,8 +33,8 @@ val tclLOG :
 *)
 val tclRealThen :
   unit Proofview.tactic ->
-  unit Proofview.tactic lazy_t ->
-  unit Proofview.tactic
+  'a Proofview.tactic lazy_t ->
+  'a Proofview.tactic
 
 (**
   Rewrite of Coq's hint printer to keep only the necessary parts

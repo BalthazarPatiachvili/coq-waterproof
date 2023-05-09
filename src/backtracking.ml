@@ -29,7 +29,7 @@ let incr_trace_depth (trace: trace): trace = {log = trace.log; current_depth = t
 (**
   Returns a [trace] value corresponding to [no trace recording]
 *)
-let no_trace (): trace = {log = false; current_depth = 0; trace = []}
+let no_trace: trace = {log = false; current_depth = 0; trace = []}
 
 (**
   Creates a [trace] value given a boolean indicating if tried hints are printed
@@ -37,27 +37,30 @@ let no_trace (): trace = {log = false; current_depth = 0; trace = []}
 let new_trace (log: bool): trace = {log = log; current_depth = 0; trace = []}
 
 (**
-  Cleans up the trace with a higher depth than the given [depth]
+  Creates a trace containing only one atom 
 *)
-let rec cleanup_info_trace (acc: trace_atom list) (trace: trace_atom list): trace_atom list =
-  match trace with
-    | [] -> acc
-    | (is_success, d, hint, src) :: l -> cleanup_info_trace ((is_success, d, hint, src)::acc) l
+let singleton_trace (log: bool) (is_success: bool) (depth: int) (hint_name: t) (src: t): trace =
+  {
+    log;
+    current_depth = 1;
+    trace = [(is_success, depth, hint_name, src)];
+  }
 
 (**
   Prints an info atom, i.e an element of the info trace
 *)
-let pr_trace_atom (env: Environ.env) (sigma: Evd.evar_map) ((is_success, d, hint, src): trace_atom): t =
-  str (String.make d ' ') ++ str (if is_success then "✓" else "×") ++ spc () ++ hint ++ str " in (" ++ src ++ str ")."
+let pr_trace_atom ((is_success, d, hint, src): trace_atom): t =
+  str (String.make (d + 2) ' ') ++ str (if is_success then "✓" else "×") ++ spc () ++ hint ++ str " in (" ++ src ++ str ")."
 
 (**
   Prints the complete info trace
 *)
-let pr_trace (env: Environ.env) (sigma: Evd.evar_map) (trace: trace): unit = match trace with
-  | {log = true; trace = atom::l; _} ->
-    Feedback.msg_notice (str "Trace:");
-    Feedback.msg_notice (prlist_with_sep fnl (pr_trace_atom env sigma) (cleanup_info_trace [atom] l))
-  | _ -> ()
+let pr_trace (trace: trace): unit =
+  Feedback.msg_notice (str "Trace:");
+  Feedback.msg_notice (str " log:" ++ bool trace.log);
+  Feedback.msg_notice (str " depth:" ++ int trace.current_depth);
+  Feedback.msg_notice (str " trace:");
+  Feedback.msg_notice (prlist_with_sep fnl pr_trace_atom trace.trace)
 
 (**
   Returns the trace atoms that have been actually applied during {! Wauto.wauto}

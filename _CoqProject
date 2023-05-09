@@ -13,8 +13,6 @@ theories/NegationManipulation.v
 theories/Notations.v
 theories/Reals.v
 
-src/typed_proof.ml
-src/typed_proof.mli
 src/backtracking.ml
 src/backtracking.mli
 src/exceptions.ml

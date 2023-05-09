@@ -67,7 +67,7 @@ let tclLOG (trace: trace) (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac:
 (**
   Wrapper around [Proofview.tclTHEN] who actually execute the first tactic before the second
 *)
-let tclRealThen (first: unit tactic) (second: unit tactic lazy_t): unit tactic =
+let tclRealThen (first: unit tactic) (second: 'a tactic lazy_t): 'a tactic =
   tclBIND first (fun () -> tclTHEN (tclUNIT ()) (Lazy.force second))
 
 (**

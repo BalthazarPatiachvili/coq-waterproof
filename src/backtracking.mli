@@ -31,7 +31,7 @@ val incr_trace_depth : trace -> trace
 (**
   Returns a [trace] value corresponding to [no trace recording]
 *)
-val no_trace : unit -> trace
+val no_trace : trace
 
 (**
   Creates a [trace] value given a boolean indicating if tried hints are printed
@@ -39,9 +39,14 @@ val no_trace : unit -> trace
 val new_trace : bool -> trace
 
 (**
+  Creates a trace containing only one atom
+*)
+val singleton_trace : bool -> bool -> int -> Pp.t -> Pp.t -> trace
+
+(**
   Prints the complete info trace
 *)
-val pr_trace : Environ.env -> Evd.evar_map -> trace -> unit
+val pr_trace : trace -> unit
 
 (**
   Returns the trace atoms that have been actually applied during {! Wauto.wauto}

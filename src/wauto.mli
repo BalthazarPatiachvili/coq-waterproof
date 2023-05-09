@@ -29,12 +29,10 @@ val hintmap_of :
   The goal cannot contain evars
 *)
 val search :
-  bool ->
+  Backtracking.trace ->
   int ->
   Hints.hint_db list ->
   Tactypes.delayed_open_constr list ->
-  Pp.t list ->
-  Pp.t list ->
   Backtracking.trace Proofview.tactic
 
 (**
@@ -50,7 +48,6 @@ val wauto :
   Tactypes.delayed_open_constr list ->
   string list ->
   Backtracking.trace Proofview.tactic
-
 
 (**
   Restricted Waterproof auto

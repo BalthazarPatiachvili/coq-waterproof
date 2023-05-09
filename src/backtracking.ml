@@ -50,16 +50,13 @@ let singleton_trace (log: bool) (is_success: bool) (depth: int) (hint_name: t) (
   Prints an info atom, i.e an element of the info trace
 *)
 let pr_trace_atom ((is_success, d, hint, src): trace_atom): t =
-  str (String.make (d + 2) ' ') ++ str (if is_success then "✓" else "×") ++ spc () ++ hint ++ str " in (" ++ src ++ str ")."
+  str (String.make (d + 1) ' ') ++ str (if is_success then "✓" else "×") ++ spc () ++ hint ++ str " in (" ++ src ++ str ")."
 
 (**
   Prints the complete info trace
 *)
 let pr_trace (trace: trace): unit =
   Feedback.msg_notice (str "Trace:");
-  Feedback.msg_notice (str " log:" ++ bool trace.log);
-  Feedback.msg_notice (str " depth:" ++ int trace.current_depth);
-  Feedback.msg_notice (str " trace:");
   Feedback.msg_notice (prlist_with_sep fnl pr_trace_atom trace.trace)
 
 (**

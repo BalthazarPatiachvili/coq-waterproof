@@ -1,15 +1,20 @@
 open Backtracking
 
 (**
+  Same function as {! Auto.exists_evaluable_reference}
+*)
+val exists_evaluable_reference : Environ.env -> Tacred.evaluable_global_reference -> bool
+
+(**
   Prints "idtac" if the [log] field is [true]
 *)
-val pr_info_nop : trace -> unit
+val pr_info_nop : unit -> unit
 
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
 val tcl_try_dbg :
-  (trace -> unit) ->
+  (unit -> unit) ->
   trace Proofview.tactic ->
   trace Proofview.tactic
 
@@ -31,8 +36,8 @@ val hintmap_of :
 val search :
   Backtracking.trace ->
   int ->
-  Hints.hint_db list ->
   Tactypes.delayed_open_constr list ->
+  Hints.hint_db list ->
   Backtracking.trace Proofview.tactic
 
 (**

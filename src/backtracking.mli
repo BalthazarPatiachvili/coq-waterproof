@@ -1,27 +1,23 @@
 (**
-  Exception raised if no proof of the goal is found
-*)
-exception SearchBound
-
-(**
   Trace atome type
 
-  Can be read as `(is_success, depth, print_function_option, hint_name, hint_db_source)`
+  Can be read as `(is_success, depth, current_proof_state`, print_function_option, hint_name, hint_db_source)`
 *)
-type trace_atom =
-  bool
-  * int
-  * Pp.t
-  * Pp.t
+type trace_atom = bool * int * Pp.t * Pp.t
 
 (**
   Debug type
 *)
 type trace = {
-  log: bool; (** Are tried hints logged ? *)
-  current_depth: int; (** The current depth of the search *)
-  trace: trace_atom list (** The full trace of tried hints *)
+  log : bool;
+  current_depth : int;
+  trace : trace_atom list;
 }
+
+(**
+  Exception raised if no proof of the goal is found
+*)
+exception SearchBound of trace
 
 (**
   Increases the debug depth by 1
@@ -29,7 +25,7 @@ type trace = {
 val incr_trace_depth : trace -> trace
 
 (**
-  Returns a [trace] value corresponding to [no trace recording]
+  [trace] value corresponding to "no trace recording"
 *)
 val no_trace : trace
 
@@ -39,9 +35,24 @@ val no_trace : trace
 val new_trace : bool -> trace
 
 (**
-  Creates a trace containing only one atom
+  Creates a trace containing only one atom 
 *)
-val singleton_trace : bool -> bool -> int -> Pp.t -> Pp.t -> trace
+val singleton_trace : bool -> Pp.t -> Pp.t -> trace
+
+(**
+  Marks all the trace atoms contained in the given [trace] as unsuccessful
+*)
+val failed : trace -> trace
+
+(**
+  Concatenates the two given traces
+*)
+val merge_traces : trace -> trace -> trace
+
+(**
+  Prints an info atom, i.e an element of the info trace
+*)
+val pr_trace_atom : trace_atom -> Pp.t
 
 (**
   Prints the complete info trace
@@ -49,9 +60,8 @@ val singleton_trace : bool -> bool -> int -> Pp.t -> Pp.t -> trace
 val pr_trace : trace -> unit
 
 (**
-  Returns the trace atoms that have been actually applied during {! Wauto.wauto}
+  Returns the trace atoms that have been actually applied during a [trace tactic] (like {! Wauto.wauto})
 
-  It is supposed here that the given [trace] has not been modified since the end of {! Wauto.wauto}.
+  It is supposed here that the given [trace] has not been modified after getting it from the [trace tactic].
 *)
-val keep_applied :
-  trace_atom list -> (int * Pp.t * Pp.t) list
+val keep_applied : trace_atom list -> (int * Pp.t * Pp.t) list

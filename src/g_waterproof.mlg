@@ -5,13 +5,9 @@ DECLARE PLUGIN "coq-waterproof.plugin"
 open Ltac_plugin
 open Ltac_plugin.G_auto
 open Proofview
-open Proofview.Notations
-open Pp
 
-open Backtracking
 open Hint_dataset
 open Hint_dataset_declarations
-open Proofutils
 open Wauto
 open Waterprove
 open Weauto
@@ -55,11 +51,7 @@ END
 TACTIC EXTEND info_wauto
   | [ "info_wauto" auto_using(lems) ] ->
     {
-      wauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive) >>= fun trace ->
-        Proofview.tclUNIT (
-          let applied = Backtracking.keep_applied trace.trace in
-          Feedback.msg_notice (str "\nApplied hints :" ++ (List.fold_left (fun acc (depth, hint, src) -> acc ++ str "\n" ++ Pp.int depth ++ str " " ++ hint ++ str "(" ++ src ++ str ")") (str "") applied));
-        )
+      tclIGNORE @@ wauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive)
     }
 END
 
@@ -73,8 +65,7 @@ END
 TACTIC EXTEND weauto
   | [ "weauto" auto_using(lems) ] ->
     {
-      let trace = new_trace false in
-      weauto trace 5 (eval_uconstrs ist lems) (get_current_databases Positive)
+      tclIGNORE (weauto false 5 (eval_uconstrs ist lems) (get_current_databases Positive))
     }
 END
 
@@ -86,16 +77,7 @@ END
 TACTIC EXTEND info_weauto
   | [ "info_weauto" auto_using(lems) ] ->
     {
-      let trace = new_trace true in
-      Names.Id.Map.iter (fun name value -> Feedback.msg_notice (str (Names.Id.to_string name) ++ str " ~ " (* ++ (Geninterp.Val.pr value) *))) ist.lfun;
-      let tactic = weauto trace 5 (eval_uconstrs ist lems) (get_current_databases Positive) in
-      let print = lazy (
-        Proofview.tclUNIT (
-          let applied = Backtracking.keep_applied trace.trace in
-          Feedback.msg_notice (str "\nApplied hints :" ++ (List.fold_left (fun acc (depth, hint, src) -> acc ++ str "\n" ++ Pp.int depth ++ str " " ++ hint ++ str "(" ++ src ++ str ")") (str "") applied));
-        )
-      ) in
-      tclRealThen tactic print
+      tclIGNORE (weauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive))
     }
 END
 

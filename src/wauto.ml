@@ -1,9 +1,9 @@
 open Auto
 open Hints
 open Names
+open Pp
 open Proofview
 open Proofview.Notations
-open Pp
 open Tactics
 open Termops
 open Unification
@@ -13,8 +13,6 @@ open Backtracking
 open Proofutils
 
 (* All the definitions below come from coq-core hidden library (i.e not visible in the API) *)
-
-exception SearchBound
 
 let auto_core_unif_flags_of st1 st2 = {
   modulo_conv_on_closed_terms = Some st1;
@@ -62,96 +60,44 @@ let exact h =
     else Unsafe.tclEVARS sigma <*> exact_check c
   end
 
-let exists_evaluable_reference (env: Environ.env) (evaluable_ref: Tacred.evaluable_global_reference) = match evaluable_ref with
+(**
+  Same function as {! Auto.exists_evaluable_reference}
+*)
+let exists_evaluable_reference (env: Environ.env) (evaluable_ref: Tacred.evaluable_global_reference): bool = match evaluable_ref with
   | Tacred.EvalConstRef _ -> true
   | Tacred.EvalVarRef v -> try ignore(Environ.lookup_named v env); true with Not_found -> false
 
 (* All the definitions below are inspired by the coq-core hidden library (i.e not visible in the API) but modified for Waterproof *)
 
-let tclLOG (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac: trace tactic) (must_use: Pp.t list) (forbidden: Pp.t list): trace tactic =
-  (
-    tclIFCATCH (
-      tac >>= fun trace ->
-      tclENV >>= fun env ->
-      tclEVARMAP >>= fun sigma ->
-      let (hint, src) = pp env sigma in
-      Feedback.msg_notice (hint ++ str "/" ++ src);
-      tclUNIT { trace with trace = (true, trace.current_depth, hint, src)::trace.trace }
-    ) tclUNIT (fun (exn,info) ->
-        tclENV >>= fun env ->
-        tclEVARMAP >>= fun sigma ->
-        (* let (hint, src) = pp env sigma in
-        trace.trace := (false, trace.current_depth, hint, src) :: !(trace.trace); *)
-        tclZERO ~info exn
-    )
-  )
-
-let merge_traces (trace1: trace) (trace2: trace): trace =
-  { trace1 with trace = List.append trace1.trace trace2.trace }
-
-let tclTraceThen (tac1: trace tactic) (tac2: trace tactic): trace tactic =
-  tac1 >>= fun trace1 ->
-  tac2 >>= fun trace2 ->
-  tclUNIT @@ merge_traces trace1 trace2
-
-let tclAggregateTraces (tac: trace list tactic): trace tactic =
-  tac >>= fun traces ->
-  tclUNIT @@ List.fold_left merge_traces no_trace traces
-
-let goal_enter (f: Goal.t -> trace tactic): trace tactic =
-  let value = ref [] in
-  tclRealThen
-    begin
-      Goal.enter @@ fun goal ->
-        begin
-          f goal >>= fun trace ->
-          value := trace::!value;
-          tclUNIT ()
-        end
-    end @@
-    lazy (tclUNIT @@ List.fold_left merge_traces no_trace (List.rev !value))
-
-let tclOrElse0 (tac1: trace tactic) (tac2: trace tactic): trace tactic =
-  tclAggregateTraces @@ 
-    begin
-      tclINDEPENDENTL @@ tclORELSE tac1 (fun _ -> tac2) >>= fun traces ->
-      Feedback.msg_notice (str "##################");
-      List.iter pr_trace traces;
-      Feedback.msg_notice (str "~~~~~~~~~~~~~~~~~~");
-      tclUNIT traces 
-    end
-
-let rec tclFirst (tacs: trace tactic list): trace tactic = match tacs with
-  | [] -> let info = Exninfo.reify () in Tacticals.tclZEROMSG ~info (str "No applicable tactic")
-  | tac::rest -> tclORELSE tac (fun _ -> tclFirst rest)
-
 (**
   Prints "idtac" if the [log] field is [true]
 *)
-let pr_info_nop (trace: trace) = if trace.log then Feedback.msg_notice (str "idtac.") else ()
+let pr_info_nop (): unit = Feedback.msg_notice (str "idtac.")
 
 (** 
   Prints a debug header if [log] is [true]
 *)
-let pr_dbg_header (trace: trace) = if trace.log then Feedback.msg_notice (str "(* info wauto: *)") else ()
+let pr_dbg_header (): unit = Feedback.msg_notice (str "(* info wauto: *)")
 
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
-let tcl_try_dbg (debug_header_printer : trace -> unit) (tac: trace tactic): trace tactic =
-  tac >>= fun trace ->
-    let new_tac =
-      debug_header_printer trace;
-      tclENV >>= fun env ->
-      tclEVARMAP >>= fun sigma ->
-        pr_trace trace;
-      tclUNIT trace
-    in
-    let after =
-      pr_info_nop trace;
-      tclUNIT trace 
-    in
-    tclOrElse0 new_tac after
+let tcl_try_dbg (debug_header_printer : unit -> unit) (tac: trace tactic): trace tactic =
+  let new_tac =
+    tac >>= fun trace ->
+    if trace.log then
+      begin
+        debug_header_printer ();
+        if trace.trace != [] then pr_trace trace;
+      end;
+    tclUNIT trace
+  in
+  let after =
+    tac >>= fun trace ->
+    if trace.log then pr_info_nop ();
+    tclUNIT trace
+  in
+  tclTraceOrElse (tclPROGRESS new_tac) after
 
 (**
   Creates a function that takes a hint database and returns a hint list
@@ -188,12 +134,12 @@ let intro_register (kont: hint_db -> trace tactic) (db: hint_db): trace tactic =
       List.nth hyps (m-1)
     with Failure _ -> CErrors.user_err Pp.(str "No such assumption.")
   in dbg_intro () >>= fun new_trace ->
-    goal_enter begin fun gl ->
+    trace_goal_enter begin fun gl ->
       let extend_local_db decl db =
         let env = Goal.env gl in
         let sigma = Goal.sigma gl in
         push_resolve_hyp env sigma (Context.Named.Declaration.get_id decl) db
-      in goal_enter @@ fun goal -> tclUNIT (nthDecl 1 goal) >>= (fun decl -> 
+      in trace_goal_enter @@ fun goal -> tclUNIT (nthDecl 1 goal) >>= (fun decl -> 
         tclTraceThen
           (tclUNIT new_trace)
           (kont (extend_local_db decl db))
@@ -202,9 +148,9 @@ let intro_register (kont: hint_db -> trace tactic) (db: hint_db): trace tactic =
 
 let rec trivial_fail_db (trace: trace) (db_list: hint_db list) (local_db: hint_db): trace tactic =
   tclAggregateTraces @@ tclINDEPENDENTL @@
-    tclOrElse0 (dbg_assumption ()) @@
-    tclOrElse0 (intro_register (trivial_fail_db trace db_list) local_db) @@
-    goal_enter begin fun gl ->
+    tclTraceOrElse (dbg_assumption ()) @@
+    tclTraceOrElse (intro_register (trivial_fail_db trace db_list) local_db) @@
+    trace_goal_enter begin fun gl ->
       let env = Goal.env gl in
       let sigma = Goal.sigma gl in
       let concl = Goal.concl gl in
@@ -218,7 +164,7 @@ let rec trivial_fail_db (trace: trace) (db_list: hint_db list) (local_db: hint_d
               Some (Tacticals.tclCOMPLETE (hinttac h))
             else None
           end
-        |> tclFirst
+        |> tclTraceFirst
     end
 
 (**
@@ -227,25 +173,25 @@ let rec trivial_fail_db (trace: trace) (db_list: hint_db list) (local_db: hint_d
 and tac_of_hint (trace: trace) (db_list: hint_db list) (local_db: hint_db) (concl: Evd.econstr): FullHint.t -> trace tactic =
   let tactic = function
     | Res_pf h -> unify_resolve_nodelta h <*> tclUNIT @@ no_trace
-    | ERes_pf _ -> goal_enter (fun gl ->
+    | ERes_pf _ -> trace_goal_enter (fun gl ->
         let info = Exninfo.reify () in
         Tacticals.tclZEROMSG ~info (str "eres_pf"))
-    | Give_exact h  -> exact h <*> tclUNIT @@ singleton_trace true true 0 (str "exact") (str "")
+    | Give_exact h  -> exact h <*> tclUNIT @@ singleton_trace true (str "exact") (str "")
     | Res_pf_THEN_trivial_fail h ->
       tclTHEN
         (unify_resolve_nodelta h)
         (trivial_fail_db no_trace db_list local_db)
     | Unfold_nth c ->
-      goal_enter begin fun gl ->
+      trace_goal_enter begin fun gl ->
        if exists_evaluable_reference (Goal.env gl) c then
          Tacticals.tclPROGRESS (reduce (Genredexpr.Unfold [Locus.AllOccurrences,c]) Locusops.onConcl) <*>
-         tclUNIT @@ singleton_trace true true 0 (str "unfold") (str "")
+         tclUNIT @@ singleton_trace true (str "unfold") (str "")
        else
          let info = Exninfo.reify () in
          Tacticals.tclFAIL ~info (str"Unbound reference")
        end
     | Extern (p, tacast) ->
-      conclPattern concl p tacast <*> tclUNIT @@ singleton_trace true true 0 (str "") (str "extern")
+      conclPattern concl p tacast <*> tclUNIT @@ singleton_trace true (str "") (str "extern")
   in
   let pr_hint (h: FullHint.t) (env: Environ.env) (sigma: Evd.evar_map): t * t =
     let origin = match FullHint.database h with
@@ -261,7 +207,7 @@ and tac_of_hint (trace: trace) (db_list: hint_db list) (local_db: hint_db) (conc
 
   The goal cannot contain evars
 *)
-let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delayed_open_constr list): trace tactic =
+let search (trace: trace) (n: int) (lems: Tactypes.delayed_open_constr list) (db_list: hint_db list): trace tactic =
   let make_local_db (gl: Goal.t): hint_db =
     let env = Goal.env gl in
     let sigma = Goal.sigma gl in
@@ -270,12 +216,12 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
   let rec inner_search (trace: trace) (n: int) (local_db: hint_db): trace tactic =
     if Int.equal n 0 then
       let info = Exninfo.reify () in
-      tclZERO ~info SearchBound
+      tclZERO ~info (SearchBound no_trace)
     else
       begin
-        tclOrElse0 (dbg_assumption ()) @@
-        tclOrElse0 (intro_register (inner_search trace n) local_db) @@
-        goal_enter begin fun gl ->
+        tclTraceOrElse (dbg_assumption ()) @@
+        tclTraceOrElse (intro_register (inner_search trace n) local_db) @@
+        trace_goal_enter begin fun gl ->
           let env = Goal.env gl in
           let sigma = Goal.sigma gl in
           let concl = Goal.concl gl in
@@ -289,7 +235,7 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
             |> List.map 
               begin fun h ->
                 tclTraceThen (hinttac h) @@
-                  goal_enter
+                  trace_goal_enter
                     begin fun gl ->
                       let hyps' = Goal.hyps gl in
                       let local_db' =
@@ -298,11 +244,11 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
                       inner_search new_trace (n-1) local_db'
                     end
               end
-            |> tclFirst
+            |> tclTraceFirst
         end
       end
   in
-  goal_enter begin fun gl ->
+  trace_goal_enter begin fun gl ->
     let local_db = make_local_db gl in
     tclORELSE
       begin
@@ -317,14 +263,14 @@ let search (trace: trace) (n: int) (db_list: hint_db list) (lems: Tactypes.delay
   Generates the {! wauto} function
 *)
 let gen_wauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list) (dbnames: hint_db_name list option): trace tactic =
-  Hints.wrap_hint_warning @@
-    goal_enter begin fun gl ->
+  wrap_hint_warning @@
+    trace_goal_enter begin fun gl ->
     let db_list =
       match dbnames with
       | Some dbnames -> make_db_list dbnames
       | None -> current_pure_db ()
     in
-    wrap_hint_warning @@ tcl_try_dbg pr_dbg_header @@ search (new_trace log) n db_list lems
+    tcl_try_dbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ search no_trace n lems db_list
   end
 
 (**

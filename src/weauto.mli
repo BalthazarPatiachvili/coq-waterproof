@@ -1,11 +1,14 @@
-open Backtracking
-
 (**
   Searches a sequence of at most [n] tactics within [db_list] and [lems] that solves the goal
 
   The goal can contain evars
 *)
-val esearch : trace -> int -> Tactypes.delayed_open_constr list -> Hints.hint_db list -> unit Proofview.tactic
+val esearch :
+  bool ->
+  int ->
+  Tactypes.delayed_open_constr list ->
+  Hints.hint_db list ->
+  Backtracking.trace Proofview.tactic
 
 (**
   Waterproof eauto
@@ -17,8 +20,8 @@ val esearch : trace -> int -> Tactypes.delayed_open_constr list -> Hints.hint_db
   The code structure has been rearranged to match the one of [Wauto.wauto].
 *)
 val weauto :
-  trace ->
+  bool ->
   int ->
   Tactypes.delayed_open_constr list ->
   string list ->
-  unit Proofview.tactic
+  Backtracking.trace Proofview.tactic

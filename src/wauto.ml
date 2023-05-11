@@ -10,6 +10,7 @@ open Unification
 open Util
 
 open Backtracking
+open Exceptions
 open Proofutils
 
 (* All the definitions below come from coq-core hidden library (i.e not visible in the API) *)
@@ -305,8 +306,9 @@ let wauto (log: bool) (n: int) (lems: Tactypes.delayed_open_constr list) (dbname
 
   This function acts the same as {! wauto} but will fail if all proof found contain at least one must-use lemma that is unused or one hint that is in the [forbidden] list.
 *)
-
 let rwauto (log: bool) (n: int) (lems: Tactypes.delayed_open_constr list) (dbnames: hint_db_name list) (must_use: Pp.t list) (forbidden: Pp.t list): trace tactic =
   must_use_tactics := must_use;
   forbidden_tactics := forbidden;
-  tclPROGRESS @@ gen_wauto log ~n lems (Some dbnames)
+  tclORELSE
+    (tclPROGRESS @@ gen_wauto log ~n lems (Some dbnames)) @@
+    (fun _ -> throw UnusedLemmas)

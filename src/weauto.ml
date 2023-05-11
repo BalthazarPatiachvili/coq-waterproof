@@ -11,6 +11,7 @@ open Termops
 open Util
 
 open Backtracking
+open Exceptions
 open Proofutils
 open Wauto
 
@@ -97,7 +98,13 @@ let initial_state (log: bool) (evk: Proofview_monad.goal_with_state) (local_db: 
     trace = new_trace log
   }
 
+(** Max depth for this search *)
 let max_depth: int ref = ref 0
+
+let must_use_tactics: Pp.t list ref = ref []
+
+let forbidden_tactics: Pp.t list ref = ref []
+
 
 (**
   Prints a debug header
@@ -300,7 +307,12 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
   | [] -> tclZERO (SearchBound no_trace)
   | tac :: l ->
     tclORELSE
-      (tac >>= fun state -> explore state)
+      (
+        tac >>= fun state -> explore state >>= fun new_state ->
+        if state.depth <> !max_depth
+          then tclUNIT new_state
+          else trace_check_used !must_use_tactics new_state.trace >>= fun new_trace -> tclUNIT { new_state with trace = new_trace }
+      )
 
       (* discriminate between search failures and [tac] raising an error *)
       (
@@ -361,3 +373,15 @@ let gen_weauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr lis
 let weauto (log: bool) (n: int) (lems: Tactypes.delayed_open_constr list) (db_names: hint_db_name list): trace tactic =
   max_depth := n;
   gen_weauto log ~n lems (Some db_names)
+
+(**
+  Restricted Waterproof eauto
+
+  This function acts the same as {! weauto} but will fail if all proof found contain at least one must-use lemma that is unused or one hint that is in the [forbidden] list.
+*)
+let rweauto (log: bool) (n: int) (lems: Tactypes.delayed_open_constr list) (dbnames: hint_db_name list) (must_use: Pp.t list) (forbidden: Pp.t list): trace tactic =
+  must_use_tactics := must_use;
+  forbidden_tactics := forbidden;
+  tclORELSE
+    (tclPROGRESS @@ gen_weauto log ~n lems (Some dbnames)) @@
+    (fun _ -> throw UnusedLemmas)

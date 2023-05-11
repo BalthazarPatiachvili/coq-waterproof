@@ -25,3 +25,17 @@ val weauto :
   Tactypes.delayed_open_constr list ->
   string list ->
   Backtracking.trace Proofview.tactic
+
+(**
+  Restricted Waterproof eauto
+
+  This function acts the same as {! wauto} but will fail if all proof found contain at least one must-use lemma that is unused or one hint that is in the [forbidden] list.
+*)
+val rweauto :
+  bool ->
+  int ->
+  Tactypes.delayed_open_constr list ->
+  Hints.hint_db_name list ->
+  Pp.t list ->
+  Pp.t list ->
+  Backtracking.trace Proofview.tactic

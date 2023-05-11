@@ -4,11 +4,13 @@ open Exninfo
 open Hints
 open Pp
 open Proofview
+open Proofview.Notations
 
 open Exceptions
 open Hint_dataset
 open Hint_dataset_declarations
 open Wauto
+open Weauto
 
 (**
   List of forbidden inductive types
@@ -58,7 +60,8 @@ let shield_test (): unit tactic =
 let automation_routine (depth: int) (lems: Tactypes.delayed_open_constr list) (databases: hint_db_name list): unit tactic =
   tclORELSE
     begin
-      tclIGNORE @@ wauto false depth lems databases
+      tclIGNORE @@ wauto false depth lems databases <*>
+      tclIGNORE @@ weauto false depth lems databases
     end
     begin
       fun (exn, info) ->

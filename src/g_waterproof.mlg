@@ -30,7 +30,7 @@ let eval_uconstrs ist cs =
 }
 
 (**
-  Waterproof auto tactic
+  Waterproof [auto] tactic
 
   Partial rewrite of the [[auto]] tactic in [`coq-plugin.Ltac_plugin.G_auto`]
 
@@ -44,7 +44,7 @@ TACTIC EXTEND wauto
 END
 
 (**
-  Waterproof info_auto tactic
+  Waterproof [info_auto] tactic
 
   Equivalent of [info_auto] with {! wauto}
 *)
@@ -56,11 +56,11 @@ TACTIC EXTEND info_wauto
 END
 
 (**
-  Waterproof eauto tactic
+  Waterproof [eauto] tactic
 
-  Rewrite of the [[eauto]] tactic in [`coq-plugin.Ltac_plugin.G_auto`]
+  Rewrite of the [eauto] tactic in [`coq-plugin.Ltac_plugin.G_auto`]
 
-  Its use is the same as `eauto [using ...]`
+  Its use is the same as [eauto <using ...> <with ...>]
 *)
 TACTIC EXTEND weauto
   | [ "weauto" auto_using(lems) hintbases(db) ] ->
@@ -73,9 +73,9 @@ TACTIC EXTEND weauto
 END
 
 (**
-  Waterproof info_auto tactic
+  Waterproof [info_eauto] tactic
 
-  Equivalent of [info_auto] with {! wauto}
+  Equivalent of [info_auto] with {! weauto}
 *)
 TACTIC EXTEND info_weauto
   | [ "info_weauto" auto_using(lems) hintbases(db) ] ->
@@ -99,10 +99,61 @@ TACTIC EXTEND rwauto
         let env = Global.env () in
         let sigma = Evd.from_env env in
         List.map (Printer.pr_closed_glob_env env sigma) lems in
+      tclIGNORE @@ rwauto false 5 (eval_uconstrs ist lems) (get_current_databases Positive) lemma_names []
+    }
+END
+
+(**
+  Restricted Waterproof [info_auto] tactic
+
+  Equivalent of [info_auto] with {! rwauto}
+*)
+  TACTIC EXTEND info_rwauto
+  | [ "rwauto" auto_using(lems) ] ->
+    {
+      let lemma_names =
+        let env = Global.env () in
+        let sigma = Evd.from_env env in
+        List.map (Printer.pr_closed_glob_env env sigma) lems in
       tclIGNORE @@ rwauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive) lemma_names []
     }
 END
 
+(**
+  Restricted waterproof auto tactic
+
+  Its use is the same as the {! waeuto} tacitc but it will fail if one of the given lemmas is not used
+*)
+  TACTIC EXTEND rweauto
+  | [ "rweauto" auto_using(lems) ] ->
+    {
+      let lemma_names =
+        let env = Global.env () in
+        let sigma = Evd.from_env env in
+        List.map (Printer.pr_closed_glob_env env sigma) lems in
+      tclIGNORE @@ rweauto false 5 (eval_uconstrs ist lems) (get_current_databases Positive) lemma_names []
+    }
+END
+
+(**
+  Restricted Waterproof [info_eauto] tactic
+
+  Equivalent of [info_eauto] with {! rweauto}
+*)
+  TACTIC EXTEND info_rweauto
+  | [ "rweauto" auto_using(lems) ] ->
+    {
+      let lemma_names =
+        let env = Global.env () in
+        let sigma = Evd.from_env env in
+        List.map (Printer.pr_closed_glob_env env sigma) lems in
+      tclIGNORE @@ rweauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive) lemma_names []
+    }
+END
+
+(**
+  Test tactic used to check if the solve of the current goal by [waterprove] is shielded
+*)
 TACTIC EXTEND shield
   | [ "shield" ] ->
     {
@@ -110,6 +161,11 @@ TACTIC EXTEND shield
     }
 END
 
+(**
+  Waterprove tactic
+
+  Main automation tactic of the coq-waterproof library
+*)
 TACTIC EXTEND waterprove
   | [ "waterprove" auto_using(lems) ] ->
     {

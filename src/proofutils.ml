@@ -1,4 +1,5 @@
 open Hints
+open Pp
 open Proofview
 open Proofview.Notations
 
@@ -58,13 +59,14 @@ let tclRealThen (first: unit tactic) (second: 'a tactic lazy_t): 'a tactic =
   - [must_use: : Pp.t list]: list of tactics that must be used during the automation
   - [forbidden: : Pp.t list]: list of tactics that mustn't be used during the automation
 *)
-let tclLOG (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac: trace tactic) (must_use: Pp.t list) (forbidden: Pp.t list): trace tactic =
+let tclLOG (pp: Environ.env -> Evd.evar_map -> t * t) (tac: trace tactic) (must_use: t list) (forbidden: t list): trace tactic =
   (
     tclIFCATCH (
       tac >>= fun trace ->
       tclENV >>= fun env ->
       tclEVARMAP >>= fun sigma ->
       let (hint, src) = pp env sigma in
+      Feedback.msg_notice (hint ++ str "/" ++ src);
       if List.mem hint forbidden
         then tclZERO ~info:(Exninfo.reify ()) (SearchBound trace)
         else tclUNIT { trace with trace = (true, trace.current_depth, hint, src)::trace.trace }

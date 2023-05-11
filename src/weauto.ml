@@ -106,11 +106,12 @@ let pr_dbg_header () = Feedback.msg_notice (str "(* info weauto: *)")
 
 let tclTraceComplete (t: trace tactic): trace tactic =
   t >>= fun res ->
-    (tclINDEPENDENT
+    (
+      tclINDEPENDENT
         (let info = Exninfo.reify () in
         tclZERO ~info (SearchBound no_trace))
     ) <*>
-      tclUNIT res
+    tclUNIT res
 
 let rec e_trivial_fail_db (db_list: hint_db list) (local_db: hint_db): trace tactic =
   let next = trace_goal_enter begin fun gl ->
@@ -251,7 +252,7 @@ let branching (delayed_database: delayed_db) (dblist: hint_db list) (local_lemma
           if hyps' == hyps
             then db
             else make_local_hint_db env sigma ~ts:TransparentState.full true local_lemmas
-        in try 
+        in try
           esearch_find env sigma dblist db secvars concl
             |> List.sort compare
             |> List.map (fun (tac, _, pp) -> (true, mkdb, tac, pp))
@@ -289,7 +290,7 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
                     then pred state.depth
                     else state.depth
                 in
-                tclUNIT { depth; tactics_resolution = List.map join lgls @ rest; trace }
+                tclUNIT { depth; tactics_resolution = List.map join lgls @ rest; trace = merge_traces state.trace trace }
               in
               tacs
                 |> List.map cast
@@ -297,12 +298,18 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
 
   and explore_many (tactic_list: search_state tactic list) = match tactic_list with
   | [] -> tclZERO (SearchBound no_trace)
-  | tac :: l -> 
+  | tac :: l ->
     tclORELSE
       (tac >>= fun state -> explore state)
 
       (* discriminate between search failures and [tac] raising an error *)
-      (fun e -> explore_many l)
+      (
+        fun (e, _) -> match e with
+          | SearchBound trace -> 
+            explore_many @@
+            List.map (fun tac -> tac >>= fun state -> tclUNIT { state with trace = merge_traces trace state.trace }) l
+          | _ -> explore_many l
+      )
   
   in explore state
 
@@ -323,9 +330,7 @@ let esearch (log: bool) (depth: int) (lems: Tactypes.delayed_open_constr list) (
       Unsafe.tclSETGOALS [] <*> tclUNIT s.trace
     end
     begin fun (exn, info) -> match exn with
-      | SearchBound trace ->
-        pr_info_nop ();
-        tclUNIT no_trace
+      | SearchBound trace -> tclUNIT trace
       | _ -> tclZERO ~info exn
     end
   end

@@ -41,9 +41,9 @@ let auto_unif_flags_of st1 st2 =
 let auto_unif_flags =
   auto_unif_flags_of TransparentState.full TransparentState.empty
 
-let unify_resolve_nodelta h = Hints.hint_res_pf ~with_evars:true ~flags:auto_unif_flags h
+let unify_resolve_nodelta (h: hint): unit tactic = Hints.hint_res_pf ~with_evars:true ~flags:auto_unif_flags h
 
-let exact h =
+let exact (h: hint): unit tactic =
   Goal.enter begin fun gl ->
     let env = Goal.env gl in
     let sigma = Goal.sigma gl in

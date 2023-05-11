@@ -63,9 +63,12 @@ END
   Its use is the same as `eauto [using ...]`
 *)
 TACTIC EXTEND weauto
-  | [ "weauto" auto_using(lems) ] ->
+  | [ "weauto" auto_using(lems) hintbases(db) ] ->
     {
-      tclIGNORE (weauto false 5 (eval_uconstrs ist lems) (get_current_databases Positive))
+      tclIGNORE (weauto false 5 (eval_uconstrs ist lems) (match db with 
+        | None -> (get_current_databases Positive)
+        | Some db -> db
+      ))
     }
 END
 
@@ -75,9 +78,12 @@ END
   Equivalent of [info_auto] with {! wauto}
 *)
 TACTIC EXTEND info_weauto
-  | [ "info_weauto" auto_using(lems) ] ->
+  | [ "info_weauto" auto_using(lems) hintbases(db) ] ->
     {
-      tclIGNORE (weauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive))
+      tclIGNORE (weauto true 5 (eval_uconstrs ist lems) (match db with 
+        | None -> (get_current_databases Positive)
+        | Some db -> db
+      ))
     }
 END
 

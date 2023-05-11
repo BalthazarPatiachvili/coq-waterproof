@@ -175,7 +175,7 @@ and esearch_find (env: Environ.env) (sigma: Evd.evar_map) (db_list: hint_db list
       (Proofutils.pr_hint env sigma h, origin)
     in
     (* We cannot determine statically the cost of subgoals of an Extern hint, so approximate it by the hint's priority. *)
-    let tactic = tclLOG (pr_hint hint) (FullHint.run hint tac) [] [] in
+    let tactic = tclLOG (pr_hint hint) (FullHint.run hint tac) [] in
     (tactic, cost, FullHint.print env sigma hint)
   in
   List.map tac_of_hint flagged_hints
@@ -234,7 +234,7 @@ let branching (delayed_database: delayed_db) (dblist: hint_db list) (local_lemma
 
         let map_assum (id: variable): (bool * (Environ.env -> Evd.evar_map -> hint_db) * trace tactic * Pp.t) =
           let hint =  str "exact" ++ str " " ++ Id.print id in
-          (false, mkdb, tclLOG (fun _ _ -> (hint, str "")) (e_give_exact (mkVar id) <*> tclUNIT no_trace) [] [], hint)
+          (false, mkdb, tclLOG (fun _ _ -> (hint, str "")) (e_give_exact (mkVar id) <*> tclUNIT no_trace) [], hint)
         in List.map map_assum (ids_of_named_context hyps)
       in
 
@@ -242,7 +242,7 @@ let branching (delayed_database: delayed_db) (dblist: hint_db list) (local_lemma
       let intro_tac: (bool * (Environ.env -> Evd.evar_map -> hint_db) * trace tactic * Pp.t) =
         let mkdb (env: Environ.env) (sigma: Evd.evar_map): hint_db =
           push_resolve_hyp env sigma (Declaration.get_id (List.hd (EConstr.named_context env))) db
-        in (false, mkdb, tclLOG (fun _ _ -> (str "intro", str "")) (Tactics.intro <*> tclUNIT no_trace) [] [], str "intro")
+        in (false, mkdb, tclLOG (fun _ _ -> (str "intro", str "")) (Tactics.intro <*> tclUNIT no_trace) [], str "intro")
       in
 
       (* Construction of tactics derivated from hint databases *)
@@ -305,7 +305,7 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
       (* discriminate between search failures and [tac] raising an error *)
       (
         fun (e, _) -> match e with
-          | SearchBound trace -> 
+          | SearchBound trace ->
             explore_many @@
             List.map (fun tac -> tac >>= fun state -> tclUNIT { state with trace = merge_traces trace state.trace }) l
           | _ -> explore_many l

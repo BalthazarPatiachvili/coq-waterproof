@@ -59,14 +59,13 @@ let tclRealThen (first: unit tactic) (second: 'a tactic lazy_t): 'a tactic =
   - [must_use: : Pp.t list]: list of tactics that must be used during the automation
   - [forbidden: : Pp.t list]: list of tactics that mustn't be used during the automation
 *)
-let tclLOG (pp: Environ.env -> Evd.evar_map -> t * t) (tac: trace tactic) (must_use: t list) (forbidden: t list): trace tactic =
+let tclLOG (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac: trace tactic) (forbidden: Pp.t list): trace tactic =
   (
     tclIFCATCH (
       tac >>= fun trace ->
       tclENV >>= fun env ->
       tclEVARMAP >>= fun sigma ->
       let (hint, src) = pp env sigma in
-      Feedback.msg_notice (hint ++ str "/" ++ src);
       if List.mem hint forbidden
         then tclZERO ~info:(Exninfo.reify ()) (SearchBound trace)
         else tclUNIT { trace with trace = (true, trace.current_depth, hint, src)::trace.trace }
@@ -80,6 +79,21 @@ let tclLOG (pp: Environ.env -> Evd.evar_map -> t * t) (tac: trace tactic) (must_
         end in tclZERO ~info (SearchBound (merge_traces trace @@ singleton_trace false hint src))
     )
   )
+
+(**
+  Checks if every hint in [must_use] is contained in [tac] and returns an exception if not
+*)
+let trace_check_used (must_use: t list) (trace: trace): trace tactic =
+  let used_lemmas = ref StringMap.empty in
+  List.iter (fun name -> used_lemmas := StringMap.add (string_of_ppcmds name) false !used_lemmas) must_use;
+  List.iter (fun (_, _, hint, _) -> used_lemmas := StringMap.update (string_of_ppcmds hint) (fun value -> match value with
+    | None -> None
+    | Some _ -> Some true
+  ) !used_lemmas) trace.trace;
+  let unused_lemmas = ref [] in
+  if StringMap.exists (fun name is_used -> if (not is_used) then unused_lemmas := name::!unused_lemmas; not is_used) !used_lemmas
+    then tclZERO ~info:(Exninfo.reify ()) (SearchBound (failed trace))
+    else tclUNIT trace
 
 (**
   Wrapper around {! Proofview.tclTHEN} with a merge of tactics' traces

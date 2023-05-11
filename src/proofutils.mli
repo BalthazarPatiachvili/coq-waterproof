@@ -95,7 +95,14 @@ val tclLOG :
   (Environ.env -> Evd.evar_map -> Pp.t * Pp.t) ->
   Backtracking.trace Proofview.tactic ->
   Pp.t list ->
+  Backtracking.trace Proofview.tactic
+
+(**
+  Checks if every hint in [must_use] is contained in [tac] and returns an exception if not
+*)
+val trace_check_used :
   Pp.t list ->
+  Backtracking.trace ->
   Backtracking.trace Proofview.tactic
 
 (**

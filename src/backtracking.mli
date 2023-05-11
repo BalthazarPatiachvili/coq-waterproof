@@ -64,4 +64,4 @@ val pr_trace : trace -> unit
 
   It is supposed here that the given [trace] has not been modified after getting it from the [trace tactic].
 *)
-val keep_applied : trace_atom list -> (int * Pp.t * Pp.t) list
+val keep_applied : trace -> trace

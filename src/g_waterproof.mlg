@@ -99,7 +99,7 @@ TACTIC EXTEND rwauto
         let env = Global.env () in
         let sigma = Evd.from_env env in
         List.map (Printer.pr_closed_glob_env env sigma) lems in
-      tclIGNORE @@ rwauto false 5 (eval_uconstrs ist lems) (get_current_databases Positive) lemma_names []
+      tclIGNORE @@ rwauto true 5 (eval_uconstrs ist lems) (get_current_databases Positive) lemma_names []
     }
 END
 

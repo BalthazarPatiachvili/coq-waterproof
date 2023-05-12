@@ -223,7 +223,7 @@ let compare ((_, c1, _): (trace tactic * cost * Pp.t)) ((_, c2, _): (trace tacti
 
   It always begins with [assumption] and [intros] (not exactly them but equivalent with evar support), then uses the hint databases
 *)
-let branching (delayed_database: delayed_db) (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_constr list): (bool * (Environ.env -> Evd.evar_map -> hint_db) * trace tactic * Pp.t) list tactic =
+let branching (n: int) (delayed_database: delayed_db) (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_constr list): (bool * (Environ.env -> Evd.evar_map -> hint_db) * trace tactic * Pp.t) list tactic =
   Goal.enter_one
     begin fun gl ->
       let env = Goal.env gl in
@@ -286,7 +286,7 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
             | [] -> explore { state with tactics_resolution = rest; trace = incr_trace_depth state.trace }
             | gl :: _ ->
               Unsafe.tclSETGOALS [gl] <*>
-              branching db dblist local_lemmas >>= fun tacs ->
+              branching state.depth db dblist local_lemmas >>= fun tacs ->
               let cast ((isrec, mkdb, tac, pp): (bool * delayed_db * trace tactic * Pp.t)): search_state tactic =
                 tclONCE tac >>= fun trace ->
                 Unsafe.tclGETGOALS >>= fun lgls ->
@@ -296,23 +296,21 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
                   if isrec && not @@ List.is_empty lgls
                     then pred state.depth
                     else state.depth
-                in
-                tclUNIT { depth; tactics_resolution = List.map join lgls @ rest; trace = merge_traces state.trace trace }
+                in tclUNIT { depth; tactics_resolution = List.map join lgls @ rest; trace = merge_traces state.trace trace }
               in
               tacs
                 |> List.map cast
                 |> explore_many
+                >>= fun s ->
+                if state.depth = !max_depth
+                  then trace_check_used !must_use_tactics s.trace >>= fun trace -> tclUNIT s
+                  else tclUNIT s
 
   and explore_many (tactic_list: search_state tactic list) = match tactic_list with
   | [] -> tclZERO (SearchBound no_trace)
   | tac :: l ->
     tclORELSE
-      (
-        tac >>= fun state -> explore state >>= fun new_state ->
-        if state.depth <> !max_depth
-          then tclUNIT new_state
-          else trace_check_used !must_use_tactics new_state.trace >>= fun new_trace -> tclUNIT { new_state with trace = new_trace }
-      )
+      (tac >>= fun state -> explore state)
 
       (* discriminate between search failures and [tac] raising an error *)
       (
@@ -351,6 +349,7 @@ let esearch (log: bool) (depth: int) (lems: Tactypes.delayed_open_constr list) (
   Generates the {! weauto} function
 *)
 let gen_weauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list) (dbnames: hint_db_name list option): trace tactic =
+  max_depth := n;
   wrap_hint_warning @@
     trace_goal_enter begin fun gl ->
     let db_list =
@@ -358,7 +357,10 @@ let gen_weauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr lis
       | Some dbnames -> make_db_list dbnames
       | None -> current_pure_db ()
     in
-    tcl_try_dbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ esearch log n lems db_list
+    tcl_try_dbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ esearch log n lems db_list >>= fun trace ->
+    must_use_tactics := [];
+    forbidden_tactics := [];
+    tclUNIT trace
   end
 
 (**
@@ -371,7 +373,6 @@ let gen_weauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr lis
   The code structure has been rearranged to match the one of [Wauto.wauto].
 *)
 let weauto (log: bool) (n: int) (lems: Tactypes.delayed_open_constr list) (db_names: hint_db_name list): trace tactic =
-  max_depth := n;
   gen_weauto log ~n lems (Some db_names)
 
 (**

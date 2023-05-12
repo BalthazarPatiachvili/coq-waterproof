@@ -306,7 +306,7 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
                   then trace_check_used !must_use_tactics s.trace >>= fun trace -> tclUNIT s
                   else tclUNIT s
 
-  and explore_many (tactic_list: search_state tactic list) = match tactic_list with
+  and explore_many (tactic_list: search_state tactic list): search_state tactic = match tactic_list with
   | [] -> tclZERO (SearchBound no_trace)
   | tac :: l ->
     tclORELSE
@@ -315,9 +315,7 @@ let resolve_esearch (dblist: hint_db list) (local_lemmas: Tactypes.delayed_open_
       (* discriminate between search failures and [tac] raising an error *)
       (
         fun (e, _) -> match e with
-          | SearchBound trace ->
-            explore_many @@
-            List.map (fun tac -> tac >>= fun state -> tclUNIT { state with trace = merge_traces trace state.trace }) l
+          | SearchBound trace -> explore_many l 
           | _ -> explore_many l
       )
   
@@ -357,7 +355,7 @@ let gen_weauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr lis
       | Some dbnames -> make_db_list dbnames
       | None -> current_pure_db ()
     in
-    tcl_try_dbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ esearch log n lems db_list >>= fun trace ->
+    tclTryDbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ esearch log n lems db_list >>= fun trace ->
     must_use_tactics := [];
     forbidden_tactics := [];
     tclUNIT trace

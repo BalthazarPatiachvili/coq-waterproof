@@ -13,7 +13,7 @@ val pr_info_nop : unit -> unit
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
-val tcl_try_dbg :
+val tclTryDbg :
   (unit -> unit) ->
   trace Proofview.tactic ->
   trace Proofview.tactic

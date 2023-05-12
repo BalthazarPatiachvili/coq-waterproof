@@ -87,7 +87,7 @@ let pr_dbg_header (): unit = Feedback.msg_notice (str "(* info wauto: *)")
 (**
   Tries the given tactic and calls an info printer if it fails
 *)
-let tcl_try_dbg (debug_header_printer : unit -> unit) (tac: trace tactic): trace tactic =
+let tclTryDbg (debug_header_printer : unit -> unit) (tac: trace tactic): trace tactic =
   let new_tac =
     tac >>= fun trace ->
     if trace.log then
@@ -95,7 +95,7 @@ let tcl_try_dbg (debug_header_printer : unit -> unit) (tac: trace tactic): trace
         debug_header_printer ();
         if trace.trace <> [] then
           begin 
-            pr_trace trace; 
+            pr_trace trace;
             Feedback.msg_notice @@ str "\nApplied lemmas:";
             pr_trace @@ keep_applied trace
           end;
@@ -284,7 +284,7 @@ let gen_wauto (log: bool) ?(n: int = 5) (lems: Tactypes.delayed_open_constr list
       | Some dbnames -> make_db_list dbnames
       | None -> current_pure_db ()
     in
-    tcl_try_dbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ search no_trace n lems db_list >>= fun trace ->
+    tclTryDbg pr_dbg_header @@ tclTraceThen (tclUNIT @@ new_trace log) @@ search no_trace n lems db_list >>= fun trace ->
     must_use_tactics := [];
     forbidden_tactics := [];
     tclUNIT trace

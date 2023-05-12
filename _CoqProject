@@ -37,6 +37,7 @@ src/waterproof.mlpack
 tests/tactics/Wauto.v
 tests/tactics/Weauto.v
 tests/tactics/Rwauto.v
+tests/tactics/Rweauto.v
 tests/databases/Core.v
 tests/databases/Empty.v
 tests/databases/RealsAndIntegers.v

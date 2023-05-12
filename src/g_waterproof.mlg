@@ -109,7 +109,7 @@ END
   Equivalent of [info_auto] with {! rwauto}
 *)
   TACTIC EXTEND info_rwauto
-  | [ "rwauto" auto_using(lems) ] ->
+  | [ "info_rwauto" auto_using(lems) ] ->
     {
       let lemma_names =
         let env = Global.env () in
@@ -141,7 +141,7 @@ END
   Equivalent of [info_eauto] with {! rweauto}
 *)
   TACTIC EXTEND info_rweauto
-  | [ "rweauto" auto_using(lems) ] ->
+  | [ "info_rweauto" auto_using(lems) ] ->
     {
       let lemma_names =
         let env = Global.env () in

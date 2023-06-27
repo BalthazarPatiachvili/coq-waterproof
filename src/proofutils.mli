@@ -132,8 +132,8 @@ module TypedTactics : functor (M : Mergeable) -> sig
     (Proofview.Goal.t -> M.elt Proofview.tactic) ->
     M.elt Proofview.tactic
 
-  (** Generalisation of {! Proofview.tclINDEPENDENT} *)
-  val typedIndependant :
+  (** Generalization of {! Proofview.tclINDEPENDENT} *)
+  val typedIndependent :
     M.elt Proofview.tactic -> M.elt Proofview.tactic
 
 end
@@ -152,7 +152,7 @@ module TraceTactics : sig
     (Proofview.Goal.t -> Backtracking.trace Proofview.tactic) ->
     Backtracking.trace Proofview.tactic
 
-  val typedIndependant :
+  val typedIndependent :
     Backtracking.trace Proofview.tactic ->
     Backtracking.trace Proofview.tactic
 end

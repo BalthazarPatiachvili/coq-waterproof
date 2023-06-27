@@ -170,7 +170,7 @@ let intro_register (kont: hint_db -> trace tactic) (db: hint_db) (forbidden_tact
     end
 
 let rec trivial_fail_db (trace: trace) (db_list: hint_db list) (forbidden_tactics: Pp.t list) (local_db: hint_db): trace tactic =
-  TraceTactics.typedIndependant @@
+  TraceTactics.typedIndependent @@
     tclTraceOrElse (dbg_assumption forbidden_tactics) @@
     tclTraceOrElse (intro_register (trivial_fail_db trace db_list forbidden_tactics) local_db forbidden_tactics) @@
     TraceTactics.typedGoalEnter begin fun gl ->
@@ -236,7 +236,7 @@ let search (trace: trace) (max_depth: int) (lems: Tactypes.delayed_open_constr l
     let sigma = Goal.sigma gl in
     try make_local_hint_db env sigma false lems with _ -> make_local_hint_db env sigma false []
   in
-  let rec inner_search (trace: trace) (n: int) (previous_envs: (EConstr.named_context * EConstr.constr * Evd.evar_map) list) (local_db: hint_db): trace tactic =
+  let rec inner_search (trace: trace) (n: int) (previous_envs: (EConstr.named_context * EConstr.constr) list) (local_db: hint_db): trace tactic =
     if Int.equal n 0 then
       let info = Exninfo.reify () in
       tclZERO ~info (SearchBound no_trace)
@@ -256,18 +256,24 @@ let search (trace: trace) (max_depth: int) (lems: Tactypes.delayed_open_constr l
             |> List.map_append (fun db -> try hintmap db with Not_found -> [])
             |> List.map
               begin fun h ->
-                TraceTactics.typedThen
-                  (hinttac h) @@
-                  begin
-                    TraceTactics.typedGoalEnter
-                      begin fun goal ->
-                        let local_db' = make_local_db goal in
-                        if List.mem (Goal.hyps goal, Goal.concl goal, Goal.sigma goal) previous_envs
-                          then tclZERO (SearchBound no_trace)
-                          else inner_search new_trace (n-1) ((Goal.hyps goal, Goal.concl goal, Goal.sigma goal)::previous_envs) local_db'
-                      end
+                begin
+                  TraceTactics.typedThen
+                    (hinttac h) @@
+                    begin
+                      TraceTactics.typedGoalEnter
+                        begin fun goal ->
+                          let local_db' = make_local_db goal in
+                          if List.exists (fun (hyps, concl) ->
+                            EConstr.eq_constr sigma concl (Goal.concl goal) && Context.Named.equal (EConstr.eq_constr sigma) hyps (Goal.hyps goal)
+                          ) previous_envs
+                            then tclZERO (SearchBound no_trace)
+                            else inner_search new_trace (n-1) ((Goal.hyps goal, Goal.concl goal)::previous_envs) local_db'
+                        end
+                    end
                   end >>= fun trace ->
-                  if n <> max_depth then tclUNIT trace else trace_check_used must_use_tactics trace
+                  if n <> max_depth
+                    then tclUNIT trace
+                    else trace_check_used must_use_tactics trace
               end
             |> tclTraceFirst
         end
@@ -277,7 +283,7 @@ let search (trace: trace) (max_depth: int) (lems: Tactypes.delayed_open_constr l
   let local_db = make_local_db goal in
   tclORELSE
     begin
-      inner_search trace max_depth [] local_db
+      inner_search trace max_depth [Goal.hyps goal, Goal.concl goal] local_db
     end
     begin fun _ ->
       tclUNIT no_trace

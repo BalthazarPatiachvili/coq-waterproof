@@ -95,8 +95,8 @@ module TypedTactics(M: Mergeable) = struct
     let tactics = List.map (fun goal_tactic -> goal_tactic >>= f) goals in
     List.fold_left (fun acc tac -> typedThen acc tac) (tclUNIT M.empty) tactics
 
-  (** Generalisation of {! Proofview.tclINDEPENDENT} *)
-  let typedIndependant (tactic: M.elt tactic): M.elt tactic =
+  (** Generalization of {! Proofview.tclINDEPENDENT} *)
+  let typedIndependent (tactic: M.elt tactic): M.elt tactic =
     tclINDEPENDENTL tactic >>= fun elts -> tclUNIT @@ List.fold_left M.merge M.empty elts
 
 end
@@ -125,24 +125,24 @@ module TraceTactics = TypedTactics(
   - [forbidden: : Pp.t list]: list of tactics that mustn't be used during the automation
 *)
 let tclLOG (pp: Environ.env -> Evd.evar_map -> Pp.t * Pp.t) (tac: trace tactic) (forbidden: Pp.t list): trace tactic =
-  (
-    tclIFCATCH (
-      tac >>= fun trace ->
+  tclIFCATCH (
+    tac >>= fun trace ->
+    tclENV >>= fun env ->
+    tclEVARMAP >>= fun sigma ->
+    let (hint, src) = pp env sigma in
+    (* Feedback.msg_notice hint; *)
+    if List.mem hint forbidden
+      then tclZERO ~info:(Exninfo.reify ()) (SearchBound trace)
+      else tclUNIT { trace with trace = (true, trace.current_depth, hint, src)::trace.trace }
+  ) tclUNIT (fun (exn, info) ->
       tclENV >>= fun env ->
       tclEVARMAP >>= fun sigma ->
       let (hint, src) = pp env sigma in
-      if List.mem hint forbidden
-        then tclZERO ~info:(Exninfo.reify ()) (SearchBound trace)
-        else tclUNIT { trace with trace = (true, trace.current_depth, hint, src)::trace.trace }
-    ) tclUNIT (fun (exn, info) ->
-        tclENV >>= fun env ->
-        tclEVARMAP >>= fun sigma ->
-        let (hint, src) = pp env sigma in
-        let trace = begin match exn with
-          | SearchBound trace ->  trace 
-          | _ -> no_trace
-        end in tclZERO ~info (SearchBound (merge_traces trace @@ singleton_trace false hint src))
-    )
+      (* Feedback.msg_notice hint; *)
+      let trace = begin match exn with
+        | SearchBound trace ->  trace 
+        | _ -> no_trace
+      end in tclZERO ~info (SearchBound (merge_traces trace @@ singleton_trace false hint src))
   )
 
 (**
@@ -157,14 +157,14 @@ let trace_check_used (must_use: t list) (trace: trace): trace tactic =
   ) !used_lemmas) trace.trace;
   let unused_lemmas = ref [] in
   if StringMap.exists (fun name is_used -> if (not is_used) then unused_lemmas := name::!unused_lemmas; not is_used) !used_lemmas
-    then tclZERO ~info:(Exninfo.reify ()) (SearchBound (failed trace))
+    then ((* Feedback.msg_notice @@ str "Failed attempt"; pr_trace trace; Feedback.msg_notice @@ str "";  *)tclZERO ~info:(Exninfo.reify ()) (SearchBound (failed trace)))
     else tclUNIT trace
 
 (**
   Rewrite of {! Tacticals.tclORELSE0} to give the trace of the failed tactic instead of the exception
 *)
 let tclOrElse0 (tac: trace tactic) (f: trace -> trace tactic): trace tactic =
-  TraceTactics.typedIndependant @@
+  TraceTactics.typedIndependent @@
   tclORELSE tac 
     begin fun (e, info) -> match e with
       | SearchBound trace -> f trace
@@ -199,4 +199,7 @@ let pr_hint (env: Environ.env) (sigma: Evd.evar_map) (h: FullHint.t) =
     | Give_exact c -> pr_hint_elt env sigma c
     | Res_pf_THEN_trivial_fail c -> pr_hint_elt env sigma c
     | Unfold_nth c -> Printer.pr_evaluable_reference c
-    | Extern (_, tac) -> Pputils.pr_glb_generic env sigma tac
+    | Extern (pattern_opt, tac) ->
+      match pattern_opt with 
+        | None -> Pputils.pr_glb_generic env sigma tac
+        | Some pattern -> Printer.pr_constr_pattern_env env sigma pattern

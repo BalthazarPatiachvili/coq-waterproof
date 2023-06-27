@@ -21,12 +21,12 @@ open Pp
 (**
   Trace atome type
 
-  Can be read as [(is_success, depth, print_function_option, hint_name, hint_db_source)]
+  Can be read as [(is_success, depth, hint_name, hint_db_source)]
 *)
 type trace_atom = bool * int * t * t
 
 (**
-  Debug type
+  Trace type
 *)
 type trace = {
   log: bool; (** Are tried hints printed ? *)

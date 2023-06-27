@@ -19,17 +19,17 @@
 (**
   Trace atome type
 
-  Can be read as `(is_success, depth, current_proof_state`, print_function_option, hint_name, hint_db_source)`
+  Can be read as [(is_success, depth, hint_name, hint_db_source)]
 *)
 type trace_atom = bool * int * Pp.t * Pp.t
 
 (**
-  Debug type
+  Trace type
 *)
 type trace = {
-  log : bool;
-  current_depth : int;
-  trace : trace_atom list;
+  log: bool; (** Are tried hints printed ? *)
+  current_depth: int; (** The current depth of the search *)
+  trace: trace_atom list (** The full trace of tried hints *)
 }
 
 (**

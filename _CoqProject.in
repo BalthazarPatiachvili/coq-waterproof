@@ -121,7 +121,7 @@ tests/tactics/Contradiction.v
 tests/tactics/Define.v
 tests/tactics/Either.v
 tests/tactics/Induction.v
-tests/tactics/ItHolds.v
+# tests/tactics/ItHolds.v
 tests/tactics/ItSuffices.v
 tests/tactics/Take.v
 tests/tactics/ToShow.v

@@ -264,7 +264,9 @@ let search (trace: trace) (max_depth: int) (lems: Tactypes.delayed_open_constr l
                         begin fun goal ->
                           let local_db' = make_local_db goal in
                           if List.exists (fun (hyps, concl) ->
-                            EConstr.eq_constr sigma concl (Goal.concl goal) && Context.Named.equal (EConstr.eq_constr sigma) hyps (Goal.hyps goal)
+                            let inner_sigma = Goal.sigma goal in
+                            EConstr.eq_constr inner_sigma concl (Goal.concl goal) &&
+                            Context.Named.equal (EConstr.eq_constr inner_sigma) hyps (Goal.hyps goal)
                           ) previous_envs
                             then tclZERO (SearchBound no_trace)
                             else inner_search new_trace (n-1) ((Goal.hyps goal, Goal.concl goal)::previous_envs) local_db'

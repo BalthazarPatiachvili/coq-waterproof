@@ -342,8 +342,11 @@ let resolve_esearch (max_depth: int) (dblist: hint_db list) (local_lemmas: Tacty
             | SearchBound trace -> explore_many previous_envs l
             | _ -> explore_many previous_envs l
         )
-  
-  in explore state []
+  in 
+  let module SearchState = (val (search_tactics_factory {state with tactics_resolution = []})) in
+  let module StateTactics = TypedTactics(SearchState) in
+  StateTactics.typedGoalEnter @@ fun goal ->
+  explore state [Goal.hyps goal, Goal.concl goal]
 
 (**
   Searches a sequence of at most [n] tactics within [db_list] and [lems] that solves the goal

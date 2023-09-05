@@ -19,40 +19,64 @@
 Require Import Ltac2.Ltac2.
 
 Require Import Waterproof.Waterproof.
-Require Import Waterproof.Automation.
 Require Import Waterproof.Notations.
-Require Import Waterproof.Tactics.
 
-Open Scope nat_scope.
-(* Test 0: check if notations work. *)
+Require Import Waterproof.Waterprove.
 
-Require Import Lia.
 
-Goal  ∀ n : ℕ -> ℕ, (∀ k : ℕ, (n (k + 1) > n k)%nat) ⇒
-    ∀ k : ℕ, (n k ≥ k)%nat.
-  intro n.
+(** Tests whether the error points out which specific (in)equality in the chain does not hold. *)
+Local Parameter X : Type.
+Local Parameter a b c : X.
+
+(* Test 1: first equality does not hold. *)
+Goal (& a = b = c).
+Proof.
+  Fail waterprove 5 true Main. (* Expected: unable to find proof (a = b) *)
+Abort.
+
+(* Test 2: last equality does not hold.  *)
+Goal (a = b) -> (& a = b = c).
+Proof.
+  intro p.
+  Fail waterprove 5 true Main. (* Expected: unable to find proof (b = c) *)
+Abort.
+
+(** Test restricted automation. *)
+Variable P : Prop.
+Variable h : P -> a = b.
+#[local] Hint Extern 1 => symmetry : core.
+
+(* Test 3: fails without extra lemma. *)
+Goal P -> (& a = b = b = b = b = a).
+Proof.
   intro H.
-  induction k as [| k IHk].
-  - solve [auto with wp_integers zarith].
-  - assert (H1 : S k = k + 1) by (auto with wp_integers zarith).
-    rewrite H1.
-    assert (H2 : n (k + 1) > n k) by (auto with wp_integers zarith).
-    auto with wp_integers zarith. 
-Qed.
+  Fail waterprove 5 true Main.
+Abort.
 
-Require Import Lia.
-Goal (& 3 < 4 <= 5).
-  cbn; repeat split; solve [ltac1:(auto with wp_core wp_integers)].
-Qed.
-
-Goal (& 3 = 3 = 3).
-  cbn; repeat split; solve [auto with wp_core wp_integers].
-Qed.
-
-(* Test 1: check if terms of a subset can be coerced to terms of the underlying set (here: [R]). *)
-Goal forall x : nat, (& x < 5 = 2 + 3) -> (x < 5).
-  intro x.
+(* Test 4: extra lemma has to be used in first equality. *)
+Goal P -> (& a = b = b = b = b = b).
+Proof.
   intro H.
-  simpl_ineq_chains ().
-  solve [auto with wp_integers zarith].
-Qed.
+  rwaterprove 5 true Main constr:(h).
+Abort.
+
+(* Test 5: extra lemma has to be used in last equality. *)
+Goal P -> (& b = b = b = b = b = a).
+Proof.
+  intro H.
+  rwaterprove 5 true Main constr:(h).
+Abort.
+
+(* Test 6: extra lemma has to be used in 2nd and 2nd-to-last equality. *)
+Goal P -> (& b = b = a = b = b = a = a).
+Proof.
+  intro H.
+  rwaterprove 5 true Main constr:(h).
+Abort.
+
+(* Test 7: Fails if extra lemma is never used. *)
+Goal P -> (P -> b = c) -> (& b = b = c = b = b = c = c).
+Proof.
+  intros H1 H2.
+  Fail rwaterprove 5 true Main constr:(h).
+Abort.

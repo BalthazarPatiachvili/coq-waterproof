@@ -16,46 +16,21 @@
 (*                                                                            *)
 (******************************************************************************)
 
-Require Import Ltac2.Ltac2.
-Require Import Ltac2.Message.
 
-Require Import Waterproof.Waterproof.
-Require Import Waterproof.Automation.
-Require Import Waterproof.Tactics.
-Require Import Waterproof.Util.Assertions.
-
-(** Test 0: This should choose m equal to n *)
-Goal forall n : nat, exists m : nat, n = m.
-Proof.
-  intros.
-  Choose m := n.
-  reflexivity.
-Qed.
-
-(** Test 1: This should choose m equal n implicitly *)
-Goal forall n : nat, exists m : nat, n = m.
-    intro n.
-    Choose (n).
-    reflexivity.
-Qed.
+(* Code copied from Coq.ssr.ssreflect.
+  Could not just import ssreflect because we have clashing notation. *)
 
 
-(** Test 2: This should choose m equal to 1 *)
-Goal exists m : nat, m = 1.
-    Choose m := 1.
-    reflexivity.
-Qed.
+Lemma master_key : unit. Proof. exact tt. Qed.
 
+Definition locked {A} := let 'tt := master_key in fun x : A => x.
 
-(** Test 3: This should raise an error, as the goal is not an exists goal *)
-Goal forall n : nat, ( ( (n = n) \/ (n + 1 = n + 1) ) -> (n + 1 = n + 1)).
-    intro n.
-    Fail Choose (n).
-Abort.
-
-
-(** Test 4: This should also raise an error, as the goal is not an exists goal *)
-Goal forall n : nat, ( ( (n = n) \/ (n + 1 = n + 1) ) -> (n + 1 = n + 1)).
-    intro n.
-    Fail Choose m := n.
-Abort.
+Definition lock A (x : A) : x = locked x :=
+  (fun _evar_0_ : (fun u : unit => x = (let 'tt := u in fun x0 : A => x0) x) tt
+  =>
+  match master_key as u
+    return ((fun u0 : unit => x = (let 'tt := u0 in fun x0 : A => x0) x) u)
+  with
+  | tt => _evar_0_
+  end) eq_refl.
+ 

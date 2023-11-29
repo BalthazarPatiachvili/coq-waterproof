@@ -78,7 +78,7 @@ val pr_trace_atom : trace_atom -> Pp.t
 val pr_trace : trace -> unit
 
 (**
-  Returns the trace atoms that have been actually applied during a [trace tactic] (like {! wp_auto.wp_auto})
+  Returns the trace atoms that have been actually applied during a [trace tactic] (like {! Wp_auto.wp_auto})
 
   It is supposed here that the given [trace] has not been modified after getting it from the [trace tactic].
 *)

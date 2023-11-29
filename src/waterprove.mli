@@ -33,8 +33,6 @@ val automation_debug : bool ref
 
   The databases used for the proof search are the one declared in the current imported dataset (see {! Hint_dataset.loaded_hint_dataset}).
 
-  The forbidden patterns are defined in {! is_forbidden}.
-
   Arguments:
     - [depth] ([int]): max depth of the proof search
     - [shield] ([bool]): if set to [true], will stop the proof search if a forbidden pattern is found
@@ -51,7 +49,7 @@ val waterprove :
 (**
   Restricted Waterprove
 
-  This function is similar to {! waterprove} but use {! wp_auto.rwp_auto} and {! wp_eauto.rwp_eauto} instead of {! wp_auto.wp_auto} and {! wp_eauto.wp_eauto}.
+  This function is similar to {! waterprove} but use {! Wp_auto.rwp_auto} and {! Wp_eauto.rwp_eauto} instead of {! Wp_auto.wp_auto} and {! Wp_eauto.wp_eauto}.
 
   Arguments:
     - [depth] ([int]): max depth of the proof search

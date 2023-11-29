@@ -185,7 +185,7 @@ val trace_check_used :
   Backtracking.trace Proofview.tactic
 
 (**
-  Rewrite of {! Tacticals.tclORELSE0} to give the trace of the failed tactic instead of the exception
+  Rewrite of [tclORELSE0] to give the trace of the failed tactic instead of the exception
 *)
 val tclOrElse0 :
   Backtracking.trace Proofview.tactic ->
@@ -193,7 +193,7 @@ val tclOrElse0 :
   Backtracking.trace Proofview.tactic
 
 (**
-  Wrapper around {! tclOrElse0} with merge of trace contained in the failed [trace tactic] into the second one
+  Wrapper around [tclOrElse0] with merge of trace contained in the failed [trace tactic] into the second one
 *)
 val tclTraceOrElse :
   Backtracking.trace Proofview.tactic ->
@@ -201,7 +201,7 @@ val tclTraceOrElse :
   Backtracking.trace Proofview.tactic
 
 (**
-  Rewrite of {! Tacticals.tclTraceFirst} with [trace tactic] with a merge of traces of failed tactics 
+  Rewrite of [tclTraceFirst] with [trace tactic] with a merge of traces of failed tactics 
 *)
 val tclTraceFirst :
   Backtracking.trace Proofview.tactic list ->

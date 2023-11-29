@@ -33,7 +33,7 @@ val esearch :
 (**
   Waterproof eauto
 
-  This function is a rewrite around {! Eauto.eauto} with the same arguments to be able to retrieve which hints have been used in case of success.
+  This function is a rewrite around [eauto] with the same arguments to be able to retrieve which hints have been used in case of success.
 
   The code structure has been rearranged to match the one of [wp_auto.wp_auto].
 *)
@@ -47,7 +47,7 @@ val wp_eauto :
 (**
   Restricted Waterproof eauto
 
-  This function acts the same as {! wp_auto} but will fail if all proof found contain at least one must-use lemma that is unused or one hint that is in the [forbidden] list.
+  This function acts the same as {! Wp_auto.wp_auto} but will fail if all proof found contain at least one must-use lemma that is unused or one hint that is in the [forbidden] list.
 *)
 val rwp_eauto :
   bool ->

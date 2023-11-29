@@ -76,9 +76,11 @@ END
 (** Creates a name used to define the function interface *)
 let pname (s: string): ml_tactic_name = { mltac_plugin = "coq-core.plugins.coq-waterproof"; mltac_tactic = s }
 
+let lift (tac: unit tactic): valexpr tactic = tac <*> tclUNIT @@ of_unit ()
+
 (** Wrapper around {! Tac2env.define_primitive} to make easier the primitive definition *)
 let define_primitive (name: string) (arity: 'a arity) (f: 'a): unit =
-  Tac2env.define_primitive (pname name) (mk_closure arity f)
+  Tac2env.define_primitive (pname name) (mk_closure_val arity f)
 
 (** 
   Defines a function of arity 0 (that only take a [unit] as an argument)
@@ -87,7 +89,7 @@ let define_primitive (name: string) (arity: 'a arity) (f: 'a): unit =
 *)
 let define0 (name: string) (f: valexpr tactic): unit = define_primitive name arity_one (fun _ -> f)
 
-(** 
+(**
   Defines a function of arity 1 (that only take one argument)
 
   This function will be callable in Ltac2 with [Ltac2 @ external <ltac2_name>: <type> -> unit := "coq-waterproof" "<name>".]
@@ -158,8 +160,6 @@ let delayed_of_thunk (r: 'a repr) (tac: (unit, 'a) fun1) (env: Environ.env) (sig
 (** Converts a ['a repr] into a [(unit -> 'a) repr] *)
 let thunk (r: 'a repr): (unit, 'a) fun1 repr = fun1 unit r
 
-let _ = define0
-let _ = define1
 let _ = define2
 let _ = define3
 let _ = define5
@@ -192,19 +192,19 @@ let () =
 let () =
   define4 "waterprove" int bool (list (thunk constr)) (make_repr database_type_to_valexp database_type_from_valexp) @@
     fun depth shield lems database_type ->
-      begin
+      begin lift @@
         waterprove
           depth
           ~shield
           (List.map (fun lem -> delayed_of_thunk constr lem) lems)
           database_type
-      end >>= fun () -> tclUNIT @@ of_unit ()
+      end
 
 (* Exports {! Waterprove.rwaterprove} to Ltac2 *)
 let () =
   define6 "rwaterprove" int bool (list (thunk constr)) (make_repr database_type_to_valexp database_type_from_valexp) (list constr) (list constr) @@
     fun depth shield lems database_type must_use forbidden ->
-      begin
+      begin lift @@
         rwaterprove
           depth
           ~shield
@@ -212,15 +212,10 @@ let () =
           database_type
           must_use
           forbidden
-      end >>= fun () -> tclUNIT @@ of_unit ()
+      end
 
+(* Exports {! Exceptions.warn} and {! Exceptions.throw} to Ltac2 *)
 let () =
-  define1 "warn_external" pp @@ 
-    fun input ->
-      warn input >>= fun () -> tclUNIT @@ of_unit ()
-
-let () =
-  define1 "throw_external" pp @@
-    fun input ->
-      err input >>= fun () -> tclUNIT @@ of_unit ()
+  define1 "warn_external" pp (fun input -> lift @@ err input);
+  define1 "throw_external" pp @@ fun input -> lift @@ err input
 }

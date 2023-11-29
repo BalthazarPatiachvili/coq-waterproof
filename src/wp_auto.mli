@@ -19,7 +19,7 @@
 open Backtracking
 
 (**
-  Same function as {! Auto.exists_evaluable_reference}
+  Same function as [exists_evaluable_reference]
 *)
 val exists_evaluable_reference : Environ.env -> Tacred.evaluable_global_reference -> bool
 
@@ -64,7 +64,7 @@ val search :
 (**
   Waterproof auto
 
-  This function is a rewrite around {! Auto.auto} with the same arguments to be able to retrieve which hints have been used in case of success.
+  This function is a rewrite around [auto] with the same arguments to be able to retrieve which hints have been used in case of success.
 
   Returns a typed tactic containing the full trace
 *)

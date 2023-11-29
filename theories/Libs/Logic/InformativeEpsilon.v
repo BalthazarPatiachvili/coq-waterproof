@@ -16,39 +16,30 @@
 (*                                                                            *)
 (******************************************************************************)
 
-Require Import Ltac2.Ltac2.
-Require Import Ltac2.Message.
+Require Import ClassicalEpsilon.
 
-Require Import Waterproof.Waterproof.
-Require Import Waterproof.Automation.
-Require Import Waterproof.Tactics.
-Require Import Waterproof.Util.Assertions.
+(** ClassicalEpsilon allows us to lift an uninformative or to an informative or. *)
 
-(** Test 0: This should work fine *)
-Goal forall n : nat, (n = n).
+Lemma informative_or_lift : forall P Q : Prop, P \/ Q -> {P} + {Q}.
 Proof.
-    We use induction on n.
-    - Fail We first show the base case (2 = 2).
-      We first show the base case (0 = 0).
-      Fail We first show the base case (1 = 1).
-      reflexivity.
-    - We now show the induction step.
-      Fail We now show the induction step.
-      intro IHn.
-      reflexivity.
-Qed.
-
-(** Test 1: This should work fine *)
-Goal (0 = 0) -> forall n : nat, (n = n).
-Proof.
-    intro n.
-    We use induction on k.
-    - Fail We first show the base case (2 = 2).
-      We first show the base case  (0 = 0).
-      Fail We first show the base case (1 = 1).
-      reflexivity.
-    - We now show the induction step.
-      Fail We now show the induction step.
-      intro IHk.
-      reflexivity.
+intros P Q.
+assert ({P} + {~P}) as H by (apply excluded_middle_informative).
+destruct H.
+* intro.
+  left.
+  exact p.
+* intros H.
+  assert ({Q} + {~Q}) as H2 by (apply excluded_middle_informative).
+  destruct H2.
+  + right.
+    exact q.
+  + assert (~~Q).
+    {
+      destruct H.
+      + contradiction.
+      + intro H1.
+        destruct H1.
+        exact H.
+    }
+    contradiction.
 Qed.

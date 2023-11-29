@@ -17,38 +17,40 @@
 (******************************************************************************)
 
 Require Import Ltac2.Ltac2.
-Require Import Ltac2.Message.
+Require Import Waterproof.Libs.Analysis.StrongInductionIndexSequence.
 
-Require Import Waterproof.Waterproof.
-Require Import Waterproof.Automation.
+Variable P : nat -> Prop.
+
+
+(* Test 1: without other Waterproof tactics. *)
+Goal (exists n : nat -> nat, is_index_seq n /\ forall k : nat, P (n k)).
+Proof.
+  Define the index sequence n inductively.
+  - pose (n0 := 0); exists n0.
+    admit.
+  - Take k : ℕ and assume n(0), ..., n(k) are defined.
+    intros H1 H2.
+    pose (n_kplus1 := 0); exists n_kplus1.
+    split.
+    + admit.
+    + admit.
+Abort.
+
+
+(* Test 2: with other Waterproof tactics. *)
 Require Import Waterproof.Tactics.
-Require Import Waterproof.Util.Assertions.
-
-(** Test 0: This should work fine *)
-Goal forall n : nat, (n = n).
+Goal (exists n : nat -> nat, is_index_seq n /\ forall k : nat, P (n k)).
 Proof.
-    We use induction on n.
-    - Fail We first show the base case (2 = 2).
-      We first show the base case (0 = 0).
-      Fail We first show the base case (1 = 1).
-      reflexivity.
-    - We now show the induction step.
-      Fail We now show the induction step.
-      intro IHn.
-      reflexivity.
-Qed.
-
-(** Test 1: This should work fine *)
-Goal (0 = 0) -> forall n : nat, (n = n).
-Proof.
-    intro n.
-    We use induction on k.
-    - Fail We first show the base case (2 = 2).
-      We first show the base case  (0 = 0).
-      Fail We first show the base case (1 = 1).
-      reflexivity.
-    - We now show the induction step.
-      Fail We now show the induction step.
-      intro IHk.
-      reflexivity.
-Qed.
+  Define the index sequence n inductively.
+  - Choose n0 := 0.
+    admit.
+  - Take k : ℕ and assume n(0), ..., n(k) are defined.
+    Assume that (forall l : nat, l <= k -> P (n l)).
+    Assume that (forall l : nat, l < k -> n l < n (l + 1)).
+    Choose n_kplus1 := 0.
+    We show both statements.
+    + We need to show that (P n_kplus1).
+      admit.
+    + We need to show that (n k < n_kplus1).
+      admit.
+Abort.

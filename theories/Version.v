@@ -16,21 +16,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
+Require Import Waterproof.Waterproof.
 
-(* Code copied from Coq.ssr.ssreflect.
-  Could not just import ssreflect because we have clashing notation. *)
-
-
-Lemma master_key : unit. Proof. exact tt. Qed.
-
-Definition locked {A} := let 'tt := master_key in fun x : A => x.
-
-Definition lock A (x : A) : x = locked x :=
-  (fun _evar_0_ : (fun u : unit => x = (let 'tt := u in fun x0 : A => x0) x) tt
-  =>
-  match master_key as u
-    return ((fun u0 : unit => x = (let 'tt := u0 in fun x0 : A => x0) x) u)
-  with
-  | tt => _evar_0_
-  end) eq_refl.
- 
+Waterproof Print Version.
